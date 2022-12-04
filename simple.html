@@ -1,0 +1,239 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat</title>
+<style>
+			html,
+			body {
+				width: 100%;
+				height: 100%
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+
+</style>
+</head>
+<body>
+<input style="position:absolute;left:200px;top:200px;width:100px;height:20px"/>
+    <canvas id="mycanvas" width="1000" height="700">
+        Your browser does not support canvas element
+
+    </canvas>
+    <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript">
+    var m_canvas = document.getElementById("mycanvas"); //绘图区域
+    var m_context = m_canvas.getContext("2d"); //绘图上下文
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvas.style.width = m_canvas.width + 'px';
+        m_canvas.style.height = m_canvas.height + 'px';
+        m_canvas.height = m_canvas.height* window.devicePixelRatio;
+        m_canvas.width = m_canvas.width * window.devicePixelRatio;
+        m_context.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+
+    var m_paint = new FCPaint(); //绘图对象
+    m_paint.m_canvas = m_canvas; 
+    m_canvas.m_paint = m_paint;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paint.m_scaleFactorX = 2.5;
+        m_paint.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSize = new FCSize((m_canvas.width / m_ratio / m_paint.m_scaleFactorX), (m_canvas.height / m_ratio / m_paint.m_scaleFactorY));
+    
+    var m_views = new Array(); //视图集合
+    m_canvas.m_views = m_views;
+    
+    function MyView() {
+    };
+
+    MyView.prototype = FCView;
+
+    var myview = new MyView(); //我的视图
+    myview.m_location = new FCPoint(100, 100);
+    myview.m_size = new FCSize(200, 200);
+    myview.m_visible = true;
+    myview.m_backColor = "rgb(255,0,0)";
+    myview.m_borderColor = "rgb(0,0,0)";
+    m_views.push(myview);
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onClick = function (view, mp, buttons, clicks, delta) {
+    };
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseDown = function(view, mp, buttons, clicks, delta) {
+    };
+
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove = function(view, mp, buttons, clicks, delta) {
+    };
+    
+
+    
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel = function(view, mp, buttons, clicks, delta) {
+         if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+    };
+    
+
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseUp = function(view, mp, buttons, clicks, delta) {
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paint.onPaint = function (view, paint, clipRect) {
+        paint.fillRect(view.m_backColor, 0, 0, view.m_size.cx, view.m_size.cy);
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paint.onPaintBorder = function (view, paint, clipRect) {
+        paint.drawRect(view.m_borderColor, 1, 0, 0, 0, view.m_size.cx, view.m_size.cy);
+    };
+    
+        /*
+     * 重置大小
+     */ 
+    var resizeAll = function() {
+         m_canvas.width = window.innerWidth;
+        m_canvas.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvas.style.width = m_canvas.width + 'px';
+            m_canvas.style.height = m_canvas.height + 'px';
+            m_canvas.height = m_canvas.height* window.devicePixelRatio;
+            m_canvas.width = m_canvas.width * window.devicePixelRatio;
+            m_context.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizeDiv = new FCSize((m_canvas.width / m_ratio / m_paint.m_scaleFactorX), (m_canvas.height / m_ratio / m_paint.m_scaleFactorY));
+	    invalidate(m_paint);
+    	
+    };
+    
+        
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+
+    addMouseDownEvent(m_canvas, onMouseDown);
+    addMouseMoveEvent(m_canvas, onMouseMove);
+    addMouseWheelEvent(m_canvas, onMouseWheel);
+    addMouseUpEvent(m_canvas, onMouseUp, onClick);
+    addTouchBeginEvent(m_canvas, onTouchBegin);
+    addTouchMoveEvent(m_canvas, onTouchMove);
+    addTouchEndEvent(m_canvas, onTouchEnd, onClick);
+    invalidate(m_paint);
+    </script>
+</body>
+</html>

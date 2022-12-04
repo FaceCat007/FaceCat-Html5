@@ -1,0 +1,345 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat的HTML5框架(开源)</title>
+<style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+</style>
+</head>
+<body>
+    <canvas id="tabCanvas" width="500" height="300" >
+        Your browser does not support canvas element.
+    </canvas>
+   <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_btn.js" ></script>
+   <script type="text/javascript" src="facecat_tab.js" ></script>
+   <script type="text/javascript">
+   var m_canvasTab = document.getElementById("tabCanvas"); //绘图区域
+    var m_contextTab = m_canvasTab.getContext("2d"); //绘图上下文
+    m_canvasTab.width = window.innerWidth;
+    m_canvasTab.height = window.innerHeight;
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasTab.style.width = m_canvasTab.width + 'px';
+        m_canvasTab.style.height = m_canvasTab.height + 'px';
+        m_canvasTab.height = m_canvasTab.height* window.devicePixelRatio;
+        m_canvasTab.width = m_canvasTab.width * window.devicePixelRatio;
+        m_contextTab.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+
+    var m_paintTab = new FCPaint(); //绘图对象
+    m_paintTab.m_defaultUIStyle = "dark";
+    var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintTab.m_defaultUIStyle = "light";
+    }
+    m_paintTab.m_canvas = m_canvasTab;
+    m_canvasTab.m_paint = m_paintTab;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintTab.m_scaleFactorX = 2.5;
+        m_paintTab.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSizeTab = new FCSize((m_canvasTab.width / m_ratio / m_paintTab.m_scaleFactorX), (m_canvasTab.height / m_ratio / m_paintTab.m_scaleFactorY));
+
+    var m_views_Tab = new Array(); //视图集合
+    m_canvasTab.m_views = m_views_Tab;
+   
+   // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchEnd_Tab = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchEnd_Tab <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchEnd_Tab = now;
+    }, {
+        passive: false
+    });
+
+    //创建多页夹
+    var m_tabView = new FCTabView();
+    
+    //初始化多页夹
+    var initTab = function(){
+        m_tabView.m_paint = m_paintTab;
+        if (m_tabView.m_paint.m_defaultUIStyle == "dark") {
+            m_tabView.m_backColor = "rgb(0,0,0)";
+            m_tabView.m_borderColor = "rgb(100,100,100)";
+            m_tabView.m_textColor = "rgb(255,255,255)";
+        } else if (m_tabView.m_paint.m_defaultUIStyle == "light") {
+            m_tabView.m_backColor = "rgb(255,255,255)";
+            m_tabView.m_borderColor = "rgb(150,150,150)";
+            m_tabView.m_textColor = "rgb(0,0,0)";
+	    }
+        m_tabView.m_location = new FCPoint(0, 0);
+        m_tabView.m_size = new FCSize(m_canvasSizeTab.cx, m_canvasSizeTab.cy);
+        m_tabView.m_visible = true;
+        m_tabView.m_borderColor =  null;
+        m_tabView.m_underLineColor = "rgb(255,215,0)";
+        m_tabView.m_underLineSize = 5;
+        m_tabView.m_layout = "bottom";
+        m_tabView.m_useAnimation = true;
+        m_views_Tab.push(m_tabView);
+
+        for(var i = 0; i < 4; i++){
+            var tabPage = new FCTabPage();
+            if(i == 0){
+                tabPage.m_visible = true;
+            }else{
+                tabPage.m_visible = false;
+            }
+            tabPage.m_size = new FCSize(100, 100);
+            tabPage.m_location = new FCSize(0, 0);
+            tabPage.m_borderColor = null;
+            tabPage.m_parent = m_tabView;
+            var tabButton = new FCView();
+            tabPage.m_paint = m_paintTab;
+            tabButton.m_type = "tabbutton";
+            tabButton.m_text = "第" + (i + 1) + "页";
+            tabButton.m_visible = true;
+            tabButton.m_size = new FCSize(m_tabView.m_size.cx / 4, 40);
+            tabButton.m_location = new FCSize(0, 0);
+	        tabButton.m_textColor = "rgb(0,0,0)";
+            if(i == 0){
+                tabPage.m_backColor = "rgb(255,0,0)";
+            }else if(i == 1){
+                tabPage.m_backColor = "rgb(0,255,0)";
+            }else if(i == 2){
+                tabPage.m_backColor = "rgb(0,0,255)";
+            }
+            else if(i == 3){
+                tabPage.m_backColor = "rgb(255,0,255)";
+            }
+            addTabPage(m_tabView, tabPage, tabButton);
+            if (m_tabView.m_paint.m_defaultUIStyle == "dark") {
+                tabButton.m_backColor = "rgb(0,0,0)";
+                tabButton.m_borderColor = "rgb(100,100,100)";
+                tabButton.m_textColor = "rgb(255,255,255)";
+            } else if (m_tabView.m_paint.m_defaultUIStyle == "light") {
+                tabButton.m_backColor = "rgb(255,255,255)";
+                tabButton.m_borderColor = "rgb(150,150,150)";
+                tabButton.m_textColor = "rgb(0,0,0)";
+	        }
+            tabButton.m_font = "12px Arial";
+        }
+    }
+    initTab();
+    updateTabLayout(m_tabView);
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_Tab = function(view, mp, buttons, clicks, delta) {
+        if(view.m_type == "tabbutton"){
+            var tabView = view.m_parent;
+            var oldPage = null;
+            for(var i = 0; i < tabView.m_tabPages.length; i++){
+                if(tabView.m_tabPages[i].m_visible){
+                    oldPage = tabView.m_tabPages[i];
+                    break;
+                }
+            }
+            for(var i = 0; i < tabView.m_tabPages.length; i++){
+                if(tabView.m_tabPages[i].m_headerButton == view){
+                    selectTabPage(tabView, tabView.m_tabPages[i]);
+                    if(oldPage){
+                        startTabPageAnimation(tabView.m_tabPages[i], oldPage);
+                    }
+                    break;
+                }
+            }
+            invalidateView(tabView, m_paintTab);
+        }
+    };
+
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */  
+    var onMouseDown_Tab = function(view, mp, buttons, clicks, delta) {
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_Tab = function (view, mp, buttons, clicks, delta) {
+         if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_Tab = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_Tab = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_Tab = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_Tab = function (view, mp, buttons, clicks, delta) {
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseUp_Tab = function (view, mp, buttons, clicks, delta) {
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintTab.onPaint = function (view, paint, clipRect) {
+        drawButton(view, paint, clipRect);
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintTab.onPaintBorder = function (view, paint, clipRect) {
+        if(view.m_type == "tabview"){
+            drawTabViewBorder(view, paint, clipRect);
+        }
+    };
+    
+    addMouseDownEvent(m_canvasTab, onMouseDown_Tab);
+    addMouseMoveEvent(m_canvasTab, onMouseMove_Tab);
+    addMouseWheelEvent(m_canvasTab, onMouseWheel_Tab);
+    addMouseUpEvent(m_canvasTab, onMouseUp_Tab, onClick_Tab);
+    addTouchBeginEvent(m_canvasTab, onTouchBegin_Tab);
+    addTouchMoveEvent(m_canvasTab, onTouchMove_Tab);
+    addTouchEndEvent(m_canvasTab, onTouchEnd_Tab, onClick_Tab);
+
+    /*
+     * 重置大小
+     */ 
+    var resizeAll = function() {
+        m_canvasTab.width = window.innerWidth;
+        m_canvasTab.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasTab.style.width = m_canvasTab.width + 'px';
+            m_canvasTab.style.height = m_canvasTab.height + 'px';
+            m_canvasTab.height = m_canvasTab.height* window.devicePixelRatio;
+            m_canvasTab.width = m_canvasTab.width * window.devicePixelRatio;
+            m_contextTab.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizeTab = new FCSize((m_canvasTab.width / m_ratio / m_paintTab.m_scaleFactorX), (m_canvasTab.height / m_ratio / m_paintTab.m_scaleFactorY));
+        m_tabView.m_size = new FCSize(m_canvasSizeTab.cx, m_canvasSizeTab.cy);
+       for(var i = 0; i < m_tabView.m_tabPages.length; i++){
+            m_tabView.m_tabPages[i].m_headerButton.m_size.cx = m_tabView.m_size.cx / 4;
+        }
+        updateTabLayout(m_tabView);
+	    invalidate(m_paintTab);
+    };
+    
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+    };
+
+    invalidate(m_paintTab);
+   </script>
+</body>
+</html>

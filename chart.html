@@ -1,0 +1,1051 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat的HTML5框架(开源)</title>
+<style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+</style>
+</head>
+<body>
+    <canvas id="chartCanvas" width="1000" height="750">
+        Your browser does not support canvas element.
+    </canvas><br />&nbsp;&nbsp;&nbsp;
+    <input type="text" style="width:500px;height:22px;" id="txtBarrage"/>
+    <input type="button" value="发送弹幕" style="width:100px;height:25px;" id="btnBarrage" onclick="javascript:sendBarrage();"/>
+    <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_chart.js" ></script>
+     <script type="text/javascript" src="facecat_btn.js" ></script>
+    <script type="text/javascript">
+    var m_canvasChart = document.getElementById("chartCanvas"); //绘图区域
+    var m_contextChart = m_canvasChart.getContext("2d"); //绘图上下文
+    m_canvasChart.width = window.innerWidth;
+   m_canvasChart.height = window.innerHeight;
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasChart.style.width = m_canvasChart.width + 'px';
+        m_canvasChart.style.height = m_canvasChart.height + 'px';
+        m_canvasChart.height = m_canvasChart.height* window.devicePixelRatio;
+        m_canvasChart.width = m_canvasChart.width * window.devicePixelRatio;
+        m_contextChart.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+    var m_paintChart = new FCPaint(); //绘图对象
+    m_paintChart.m_defaultUIStyle = "dark";
+    var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintChart.m_defaultUIStyle = "light";
+    }
+    m_paintChart.m_canvas = m_canvasChart;
+    m_canvasChart.m_paint = m_paintChart;
+    
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintChart.m_scaleFactorX = 2.5;
+        m_paintChart.m_scaleFactorY = 2.5;
+        m_plotPointSize_Chart = 15;
+    }
+    var m_canvasSizeChart = new FCSize((m_canvasChart.width / m_ratio / m_paintChart.m_scaleFactorX), (m_canvasChart.height / m_ratio / m_paintChart.m_scaleFactorY));
+
+    var m_views_Chart = new Array(); //视图集合
+    m_canvasChart.m_views = m_views_Chart;
+    
+    // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchEnd_Chart = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchEnd_Chart <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchEnd_Chart = now;
+    }, {
+        passive: false
+    });
+
+    var m_showDemoTool_Chart = true; //是否显示Demo工具
+
+    //K线视图
+    var m_chart = new FCChart(); 
+    m_chart.m_backColor = "rgb(0,0,0)";
+    m_chart.m_borderColor = "rgb(255,255,255)";
+    m_chart.m_textColor = "rgb(255,255,255)";
+    m_chart.m_location = new FCPoint(0, 0);
+    if(m_showDemoTool_Chart){
+        m_chart.m_size = new FCSize(m_canvasSizeChart.cx, m_canvasSizeChart.cy - 120);
+    }else{
+        m_chart.m_size = new FCSize(m_canvasSizeChart.cx, m_canvasSizeChart.cy);
+    }
+    m_chart.m_visible = true;
+    m_chart.m_leftVScaleWidth = 70;
+    m_chart.m_rightVScaleWidth = 70;
+    m_chart.m_vScaleDistance = 35;
+    m_chart.m_hScalePixel = 11;
+    m_chart.m_hScaleHeight = 35;
+    m_chart.m_candlePaddingTop = 30;
+    m_chart.m_candlePaddingBottom = 20;
+    m_chart.m_volPaddingTop = 20;
+    m_chart.m_volPaddingBottom = 0;
+    m_chart.m_indPaddingTop = 20;
+    m_chart.m_indPaddingBottom = 20;
+    m_chart.m_vScaleDistance = 35;
+    m_chart.m_font = "12px Arial";
+    m_chart.m_paint = m_paintChart;
+    m_views_Chart.push(m_chart);
+
+    var m_addingPlot_Chart = ""; //正要添加的画线
+    if(m_showDemoTool_Chart){
+        //指标集合
+        var indicators = new Array();
+        indicators.push("MA");
+        indicators.push("BOLL");
+        indicators.push("MACD");
+        indicators.push("KDJ");
+        indicators.push("BIAS");
+        indicators.push("BBI");
+        indicators.push("RSI");
+        indicators.push("ROC");
+        indicators.push("WR");
+        indicators.push("DMA");
+        indicators.push("TRIX");
+        indicators.push("CCI");
+        var iLeft = 0;
+        for(var i = 0; i < indicators.length; i++){
+            var button = new FCView;
+            button.m_backColor = "rgb(255,255,255)";
+            button.m_textColor = "rgb(0,0,0)";
+            button.m_borderColor = "rgb(0,0,0)";
+            button.m_location = new FCPoint(iLeft, m_canvasSizeChart.cy - 120);
+            button.m_size = new FCSize(79, 29);
+            button.m_visible = true;
+            button.m_text = indicators[i];
+            button.m_font = "12px Arial";
+            button.m_name = "Indicator";
+            m_views_Chart.push(button);
+            iLeft += 80;
+        }
+
+        //画线集合
+        var plots = new Array();
+        iLeft = 0;
+        plots.push("Line");
+        plots.push("Segment");
+        plots.push("Ray");
+        plots.push("Triangle");
+        plots.push("Rect");
+        plots.push("Cycle");
+        plots.push("CircumCycle");
+        plots.push("Ellipse");
+        plots.push("AngleLine");
+        plots.push("LRLine");
+        plots.push("LRChannel");
+        plots.push("SymmetricTriangle");
+        var plotNames = new Array();
+        plotNames.push("直线");
+        plotNames.push("线段");
+        plotNames.push("射线");
+        plotNames.push("三角形");
+        plotNames.push("矩形");
+        plotNames.push("圆");
+        plotNames.push("外接圆");
+        plotNames.push("椭圆");
+        plotNames.push("角度线");
+        plotNames.push("线性回归");
+        plotNames.push("线性回归通道");
+        plotNames.push("对称三角形");
+        for(var i = 0; i < plots.length; i++){
+            var button = new FCView;
+            button.m_backColor = "rgb(255,255,255)";
+            button.m_textColor = "rgb(0,0,0)";
+            button.m_borderColor = "rgb(0,0,0)";
+            button.m_location = new FCPoint(iLeft, m_canvasSizeChart.cy - 90);
+            button.m_size = new FCSize(79, 29);
+            button.m_visible = true;
+            button.m_text = plotNames[i];
+            button.m_tag = plots[i];
+            button.m_font = "12px Arial";
+            button.m_name = "Plot";
+            m_views_Chart.push(button);
+            iLeft += 80;
+        }
+
+        var plots2 = new Array();
+        iLeft = 0;
+        plots2.push("LRBand");
+        plots2.push("ParalleGram");
+        plots2.push("SpeedResist");
+        plots2.push("FiboFanline");
+        plots2.push("FiboTimezone");
+        plots2.push("Percent");
+        plots2.push("BoxLine");
+        plots2.push("TironeLevels");
+        plots2.push("QuadrantLines");
+        plots2.push("Parallel");
+        plots2.push("GoldenRatio");
+        plots2.push("ArrowSegment");
+        var plotNames2 = new Array();
+        plotNames2.push("线性回归带");
+        plotNames2.push("平行四边形");
+        plotNames2.push("速阻线");
+        plotNames2.push("斐波扇面");
+        plotNames2.push("斐波周期线");
+        plotNames2.push("百分比线");
+        plotNames2.push("箱型线");
+        plotNames2.push("泰龙水平线");
+        plotNames2.push("四等分线");
+        plotNames2.push("平行线");
+        plotNames2.push("黄金分割线");
+        plotNames2.push("箭头线段");
+        for(var i = 0; i < plots2.length; i++){
+            var button = new FCView;
+            button.m_backColor = "rgb(255,255,255)";
+            button.m_textColor = "rgb(0,0,0)";
+            button.m_borderColor = "rgb(0,0,0)";
+            button.m_location = new FCPoint(iLeft, m_canvasSizeChart.cy - 60);
+            button.m_size = new FCSize(79, 29);
+            button.m_visible = true;
+            button.m_text = plotNames2[i];
+            button.m_tag = plots2[i];
+            button.m_font = "12px Arial";
+            button.m_name = "Plot";
+            m_views_Chart.push(button);
+            iLeft += 80;
+        }
+
+        iLeft = 0;
+        var functions = new Array();
+        functions.push("白色");
+        functions.push("黑色");
+        functions.push("标准坐标");
+        functions.push("对数坐标");
+        functions.push("清除画线");
+        functions.push("切换到最近");
+        functions.push("分时线");
+        functions.push("1分钟线");
+        functions.push("日线");
+        functions.push("秒线");
+        functions.push("TICK图");
+        for(var i = 0; i < functions.length; i++){
+            var button = new FCView;
+            button.m_backColor = "rgb(255,255,255)";
+            button.m_textColor = "rgb(0,0,0)";
+            button.m_borderColor = "rgb(0,0,0)";
+            button.m_location = new FCPoint(iLeft, m_canvasSizeChart.cy - 30);
+            button.m_size = new FCSize(79, 29);
+            button.m_visible = true;
+            button.m_text = functions[i];
+            button.m_font = "12px Arial";
+            button.m_name = "Function";
+            m_views_Chart.push(button);
+            iLeft += 80;
+        }
+    }
+
+    /*
+    * 黑色风格
+    */
+    var toBlack_Chart = function(){
+       m_chart.m_paint.m_defaultUIStyle = "dark";
+        m_chart.m_backColor = "rgb(0,0,0)";
+        m_chart.m_borderColor = "rgb(255,255,255)";
+        m_chart.m_textColor = "rgb(255,255,255)";
+        m_chart.m_scaleColor = "rgb(100,100,100)"; 
+        m_chart.m_crossTipColor = "rgb(50,50,50)"; 
+        m_chart.m_crossLineColor = "rgb(100,100,100)"; 
+        m_chart.m_gridColor = "rgba(100,100,100,0.5)"; 
+        m_indicatorColors = new Array();
+        m_indicatorColors.push("rgb(255,255,255)");
+        m_indicatorColors.push("rgb(255,255,0)");
+        m_indicatorColors.push("rgb(255,0,255)");
+        m_indicatorColors.push("rgb(255,0,0)");
+        m_indicatorColors.push("rgb(0,255,255)");
+        m_indicatorColors.push("rgb(0,255,0)");
+        m_indicatorColors.push("rgb(255,255,0)");
+        m_indicatorColors.push("rgb(255,255,255)");
+        for(var i = 0; i < m_chart.m_plots.length; i++){
+            var plot = m_chart.m_plots[i];
+            plot.m_lineColor = "rgb(255,255,255)";
+            plot.m_pointColor = "rgba(255,255,255,0.5)";
+        }
+    };
+
+    /*
+    * 白色风格
+    */
+    var toWhite_Chart = function(){
+        m_chart.m_paint.m_defaultUIStyle = "light";
+        m_chart.m_backColor = "rgb(255,255,255)";
+        m_chart.m_borderColor = "rgb(0,0,0)";
+        m_chart.m_textColor = "rgb(0,0,0)";
+        m_chart.m_scaleColor = "rgb(0,0,0)"; 
+        m_chart.m_crossTipColor = "rgb(220,220,220)"; 
+        m_chart.m_crossLineColor = "rgb(100,100,100)"; 
+        m_chart.m_gridColor = "rgba(0,0,0,0.5)"; 
+        m_indicatorColors = new Array();
+        m_indicatorColors.push("rgb(100,100,100)");
+        m_indicatorColors.push("rgb(206,147,27)");
+        m_indicatorColors.push("rgb(150,0,150)");
+        m_indicatorColors.push("rgb(255,0,0)");
+        m_indicatorColors.push("rgb(0,150,150)");
+        m_indicatorColors.push("rgb(0,150,0)");
+        m_indicatorColors.push("rgb(59,174,218)");
+        m_indicatorColors.push("rgb(50,50,50)");
+        for(var i = 0; i < m_chart.m_plots.length; i++){
+            var plot = m_chart.m_plots[i];
+            plot.m_lineColor = "rgb(0,0,0)";
+            plot.m_pointColor = "rgba(0,0,0,0.5)";
+        }
+    };
+    
+    if(m_chart.m_paint.m_defaultUIStyle == "dark"){
+        toBlack_Chart();
+    }else if(m_chart.m_paint.m_defaultUIStyle == "light"){
+        toWhite_Chart();
+    }
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_Chart = function(view, mp, buttons, clicks, delta) {
+        if (view.m_name == "Indicator") {
+            if (view.m_text == "BOLL" || view.m_text == "MA") {
+                m_chart.m_mainIndicator = view.m_text;
+            } else {
+                m_chart.m_showIndicator = view.m_text;
+            }
+            calcChartIndicator(m_chart);
+            invalidateView(m_chart, m_paintChart);
+        }else if(view.m_name == "Plot"){
+            m_addingPlot_Chart = view.m_tag;
+        }else if(view.m_name == "Function"){
+            if(view.m_text == "白色"){
+                toWhite_Chart();
+	            invalidateView(m_chart, m_paintChart);
+            }else if(view.m_text == "黑色"){
+                toBlack_Chart();
+	            invalidateView(m_chart, m_paintChart);
+            }else if(view.m_text == "标准坐标"){
+                m_chart.m_vScaleType = "standard";
+	            invalidateView(m_chart, m_paintChart);
+            }else if(view.m_text == "对数坐标"){
+                m_chart.m_vScaleType = "log10";
+	            invalidateView(m_chart, m_paintChart);
+            }else if(view.m_text == "1分钟线"){
+                m_chart.m_cycle = "minute";
+                m_requareTimes_Chart = 0;
+                m_lastDate_Chart = "";
+                queryHistoryData();
+            }else if(view.m_text == "日线"){
+                m_chart.m_cycle = "day";
+                m_requareTimes_Chart = 0;
+                m_lastDate_Chart = "";
+                queryHistoryData();
+            }else if(view.m_text == "分时线"){
+                m_chart.m_cycle = "trend";
+                m_requareTimes_Chart = 0;
+                m_lastDate_Chart = "";
+                queryHistoryData();
+            }
+            else if(view.m_text == "秒线"){
+                m_chart.m_cycle = "second";
+                m_requareTimes_Chart = 0;
+                m_lastDate_Chart = "";
+                m_chart.m_crossStopIndex = -1;
+                m_chart.m_plots = new Array();
+                m_chart.m_sPlot = null;
+                m_chart.m_selectShape = ""; 
+                m_chart.m_selectShapeEx = ""; 
+                m_chart.m_data = null;
+                m_chart.m_autoFillHScale = false;
+                m_chart.m_hScalePixel = 11;
+                invalidateView(m_chart, m_paintChart);
+                queryRuntimeData();
+            }
+             else if(view.m_text == "TICK图"){
+                m_chart.m_cycle = "tick";
+                m_requareTimes_Chart = 0;
+                m_lastDate_Chart = "";
+                m_chart.m_crossStopIndex = -1;
+                m_chart.m_plots = new Array();
+                m_chart.m_sPlot = null;
+                m_chart.m_selectShape = ""; 
+                m_chart.m_selectShapeEx = ""; 
+                m_chart.m_data = null;
+                m_chart.m_autoFillHScale = false;
+                m_chart.m_hScalePixel = 11;
+                invalidateView(m_chart, m_paintChart);
+                queryRuntimeData();
+            }
+            else if(view.m_text == "清除画线"){
+                m_chart.m_plots = new Array();
+                m_chart.m_sPlot = null;
+	            invalidateView(m_chart, m_paintChart);
+            }else if(view.m_text == "切换到最近"){
+                m_chart.m_lastVisibleIndex = m_chart.m_data.length;
+                checkChartLastVisibleIndex(m_chart);
+                resetChartVisibleRecord(m_chart);
+                calculateChartMaxMin(m_chart);
+	            invalidateView(m_chart, m_paintChart);
+            }
+        }
+    };
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseDown_Chart = function(view, mp, buttons, clicks, delta) {
+        if (view.m_type == "chart") {
+            if (!view.m_data || view.m_data.length == 0){
+                return;
+            }
+		    m_mouseDownPoint_Chart = mp;
+            view.m_crossStopIndex = getChartIndex(view, mp);
+		    if(m_addingPlot_Chart.length > 0){
+                if (mp.y < getCandleDivHeight(view)){
+                    var touchIndex = getChartIndex(view, mp);
+                    if (touchIndex >= view.m_firstVisibleIndex && touchIndex <= view.m_lastVisibleIndex){
+                        if(m_addingPlot_Chart == "FiboTimezone"){
+                            var fIndex = touchIndex;
+                            var fDate = getChartDateByIndex(view, fIndex);
+                            var y = getChartValue(view, mp);
+                            var newPlot = new FCPlot;
+                            if(view.m_paint.m_defaultUIStyle == "light"){
+                                newPlot.m_lineColor = "rgb(0,0,0)";
+                                newPlot.m_pointColor = "rgba(0,0,0,0.5)";
+                            }
+                            newPlot.m_key1 = fDate;
+                            newPlot.m_value1 = y;
+                            newPlot.m_plotType = m_addingPlot_Chart;
+                            view.m_plots.push(newPlot);
+                            view.m_sPlot = selectPlot(view, mp);
+                        }
+                        else if (m_addingPlot_Chart == "Triangle" || m_addingPlot_Chart == "CircumCycle" || m_addingPlot_Chart == "ParalleGram" || m_addingPlot_Chart == "AngleLine" || m_addingPlot_Chart == "Parallel" || m_addingPlot_Chart == "SymmetricTriangle"){
+                            var eIndex = touchIndex;
+                            var bIndex = eIndex - 5;
+                            if (bIndex >= 0) {
+                                var fDate = getChartDateByIndex(view, bIndex);
+                                var sDate = getChartDateByIndex(view, eIndex);
+                                var y = getChartValue(view, mp);
+                                var newPlot = new FCPlot;
+                                if(view.m_paint.m_defaultUIStyle == "light"){
+                                    newPlot.m_lineColor = "rgb(0,0,0)";
+                                    newPlot.m_pointColor = "rgba(0,0,0,0.5)";
+                                }
+                                newPlot.m_key1 = fDate;
+                                newPlot.m_value1 = y;
+                                newPlot.m_key2 = sDate;
+                                newPlot.m_value2 = y;
+                                newPlot.m_key3 = sDate;
+                                newPlot.m_value3 = view.m_candleMin + (view.m_candleMax - view.m_candleMin) / 2;
+                                newPlot.m_plotType = m_addingPlot_Chart;
+                                view.m_plots.push(newPlot);
+                                view.m_sPlot = selectPlot(view, mp);
+                            }
+                        }else{
+                            var eIndex = touchIndex;
+                            var bIndex = eIndex - 5;
+                            if (bIndex >= 0) {
+                                var fDate = getChartDateByIndex(view, bIndex);
+                                var sDate = getChartDateByIndex(view, eIndex);
+                                var y = getChartValue(view, mp);
+                                var newPlot = new FCPlot;
+                                if(view.m_paint.m_defaultUIStyle == "light"){
+                                    newPlot.m_lineColor = "rgb(0,0,0)";
+                                    newPlot.m_pointColor = "rgba(0,0,0,0.5)";
+                                }
+                                newPlot.m_key1 = fDate;
+                                newPlot.m_value1 = y;
+                                newPlot.m_key2 = sDate;
+                                newPlot.m_value2 = y;
+                                newPlot.m_plotType = m_addingPlot_Chart;
+                                view.m_plots.push(newPlot);
+                                view.m_sPlot = selectPlot(view, mp);
+                            }
+                        }
+                    }
+                }
+                m_addingPlot_Chart = "";
+                invalidateView(m_chart, m_paintChart);
+            }else{
+                view.m_selectShape = ""; 
+                view.m_selectShapeEx = "";
+                view.m_sPlot = selectPlot(view, mp);
+                if (!m_chart.m_sPlot) {
+                    selectShape(view, mp);
+                }
+                invalidateView(m_chart, m_paintChart);
+		    }
+	    }
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_Chart = function(view, mp, buttons, clicks, delta) {
+        if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+        if (view.m_type == "chart") {
+            if(delta > 0){
+                zoomOutChart(view);
+            }else if(delta < 0){
+                zoomInChart(view);
+            }
+            invalidateView(m_chart, m_paintChart);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_Chart = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "chart") {
+            if (!view.m_data || view.m_data.length == 0){
+                return;
+            }
+            var mp = firstPoint;
+		    m_mouseDownPoint_Chart = mp;
+            view.m_crossStopIndex = getChartIndex(view, mp);
+		    if(m_addingPlot_Chart.length > 0){
+                if (mp.y < getCandleDivHeight(view)){
+                    var touchIndex = getChartIndex(view, mp);
+                    if (touchIndex >= view.m_firstVisibleIndex && touchIndex <= view.m_lastVisibleIndex){
+                        if(m_addingPlot_Chart == "FiboTimezone"){
+                            var fIndex = touchIndex;
+                            var fDate = getChartDateByIndex(view, fIndex);
+                            var y = getChartValue(view, mp);
+                            var newPlot = new FCPlot;
+                            if(view.m_paint.m_defaultUIStyle == "light"){
+                                newPlot.m_lineColor = "rgb(0,0,0)";
+                                newPlot.m_pointColor = "rgba(0,0,0,0.5)";
+                            }
+                            newPlot.m_key1 = fDate;
+                            newPlot.m_value1 = y;
+                            newPlot.m_plotType = m_addingPlot_Chart;
+                            view.m_plots.push(newPlot);
+                            view.m_sPlot = selectPlot(view, mp);
+                        }
+                        else if (m_addingPlot_Chart == "Triangle" || m_addingPlot_Chart == "CircumCycle" || m_addingPlot_Chart == "ParalleGram" || m_addingPlot_Chart == "AngleLine" || m_addingPlot_Chart == "Parallel" || m_addingPlot_Chart == "SymmetricTriangle"){
+                            var eIndex = touchIndex;
+                            var bIndex = eIndex - 5;
+                            if (bIndex >= 0) {
+                                var fDate = getChartDateByIndex(view, bIndex);
+                                var sDate = getChartDateByIndex(view, eIndex);
+                                var y = getChartValue(view, mp);
+                                var newPlot = new FCPlot;
+                                if(view.m_paint.m_defaultUIStyle == "light"){
+                                    newPlot.m_lineColor = "rgb(0,0,0)";
+                                    newPlot.m_pointColor = "rgba(0,0,0,0.5)";
+                                }
+                                newPlot.m_key1 = fDate;
+                                newPlot.m_value1 = y;
+                                newPlot.m_key2 = sDate;
+                                newPlot.m_value2 = y;
+                                newPlot.m_key3 = sDate;
+                                newPlot.m_value3 = view.m_candleMin + (view.m_candleMax - view.m_candleMin) / 2;
+                                newPlot.m_plotType = m_addingPlot_Chart;
+                                view.m_plots.push(newPlot);
+                                view.m_sPlot = selectPlot(view, mp);
+                            }
+                        }else{
+                            var eIndex = touchIndex;
+                            var bIndex = eIndex - 5;
+                            if (bIndex >= 0) {
+                                var fDate = getChartDateByIndex(view, bIndex);
+                                var sDate = getChartDateByIndex(view, eIndex);
+                                var y = getChartValue(view, mp);
+                                var newPlot = new FCPlot;
+                                if(view.m_paint.m_defaultUIStyle == "light"){
+                                    newPlot.m_lineColor = "rgb(0,0,0)";
+                                    newPlot.m_pointColor = "rgba(0,0,0,0.5)";
+                                }
+                                newPlot.m_key1 = fDate;
+                                newPlot.m_value1 = y;
+                                newPlot.m_key2 = sDate;
+                                newPlot.m_value2 = y;
+                                newPlot.m_plotType = m_addingPlot_Chart;
+                                view.m_plots.push(newPlot);
+                                view.m_sPlot = selectPlot(view, mp);
+                            }
+                        }
+                    }
+                }
+                m_addingPlot_Chart = "";
+                invalidateView(m_chart, m_paintChart);
+            }else{
+                view.m_selectShape = ""; 
+                view.m_selectShapeEx = "";
+                view.m_sPlot = selectPlot(view, mp);
+                if (!m_chart.m_sPlot) {
+                    selectShape(view, mp);
+                }
+                invalidateView(m_chart, m_paintChart);
+		    }
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_Chart = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "chart") {
+            mouseMoveChart(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paintChart);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_Chart = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "chart") {
+		    m_firstTouchIndexCache_Chart = -1;
+            m_secondTouchIndexCache_Chart = -1;
+	    }
+    };
+
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_Chart = function(view, mp, buttons, clicks, delta) {
+        if(view.m_type == "chart"){
+		    var firstTouch = false, secondTouch = false;
+		    var firstPoint = mp, secondPoint = mp;
+		    if(buttons == 1){
+		        firstTouch = true;
+		    }
+		    mouseMoveChart(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	        invalidateView(m_chart, m_paintChart);
+        }
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseUp_Chart = function(view, mp, buttons, clicks, delta) {
+        if (view.m_type == "chart") {
+            m_firstTouchIndexCache_Chart = -1;
+            m_secondTouchIndexCache_Chart = -1;
+	    }
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintChart.onPaint = function(view, paint, clipRect) {
+        if(view.m_type == "chart"){
+	        drawChart(view, paint, clipRect);
+	    }else{
+	        drawButton(view, paint, clipRect);
+	    }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintChart.onPaintBorder = function(view, paint, clipRect) {
+    };
+    
+    addMouseDownEvent(m_canvasChart, onMouseDown_Chart);
+    addMouseMoveEvent(m_canvasChart, onMouseMove_Chart);
+    addMouseWheelEvent(m_canvasChart, onMouseWheel_Chart);
+    addMouseUpEvent(m_canvasChart, onMouseUp_Chart, onClick_Chart);
+    addTouchBeginEvent(m_canvasChart, onTouchBegin_Chart);
+    addTouchMoveEvent(m_canvasChart, onTouchMove_Chart);
+    addTouchEndEvent(m_canvasChart, onTouchEnd_Chart, onClick_Chart);
+
+    /*
+     * 重置大小
+     */ 
+    var resizeAll = function() {
+         m_canvasChart.width = window.innerWidth;
+        m_canvasChart.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasChart.style.width = m_canvasChart.width + 'px';
+            m_canvasChart.style.height = m_canvasChart.height + 'px';
+            m_canvasChart.height = m_canvasChart.height* window.devicePixelRatio;
+            m_canvasChart.width = m_canvasChart.width * window.devicePixelRatio;
+            m_contextChart.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizeChart = new FCSize((m_canvasChart.width / m_ratio / m_paintChart.m_scaleFactorX), (m_canvasChart.height / m_ratio / m_paintChart.m_scaleFactorY));
+        m_chart.m_size = new FCSize(m_canvasSizeChart.cx, m_canvasSizeChart.cy);
+        for(var i = 0; i < m_views_Chart.length; i++){
+            if(m_views_Chart[i].m_type != "chart"){
+                m_views_Chart[i].m_visible = false;
+            }
+        }
+        resetChartVisibleRecord(m_chart);
+        checkChartLastVisibleIndex(m_chart);
+        calculateChartMaxMin(m_chart);
+	    invalidate(m_paintChart);
+    };
+    
+        
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+    
+
+    //已请求次数
+    var m_requareTimes_Chart = 0;
+    //最新数据的日期
+    var m_lastDate_Chart = "";
+
+    /*
+     * 查询历史数据
+     */ 
+    var queryHistoryData = function() {
+	    var result;
+        if (m_requareTimes_Chart == 0) {
+            if(m_chart.m_cycle != "second" && m_chart.m_cycle != "tick"){
+                m_chart.m_plots = new Array();
+                var url = "https://api.coincap.io/v2/candles?exchange=binance&interval=m1&baseId=bitcoin&quoteId=tether";
+                if (m_chart.m_cycle == "day") {
+                    url = "https://api.coincap.io/v2/candles?exchange=binance&interval=d1&baseId=bitcoin&quoteId=tether";
+                }
+                var xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("GET", url, true);
+                xmlhttp.onreadystatechange = function () {
+                    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {	
+                    m_chart.m_crossStopIndex = -1;
+                    m_chart.m_plots = new Array();
+                    m_chart.m_sPlot = null;
+                    m_chart.m_selectShape = ""; 
+                    m_chart.m_selectShapeEx = ""; 
+	                if (m_chart.m_cycle == "trend") {
+	                    m_chart.m_autoFillHScale = true;
+	                }else{
+            	        m_chart.m_autoFillHScale = false;
+	                }
+                    m_chart.m_hScalePixel = 11;
+                        var result = xmlhttp.responseText;
+                        var json = eval('(' + result + ')');
+                        var dataList = new Array();
+                        for (var i = 0; i < json.data.length; i++) {
+                            var data = new SecurityData();
+                            data.m_close = parseFloat(json.data[i].close);
+                            data.m_high = parseFloat(json.data[i].high);
+                            data.m_low = parseFloat(json.data[i].low);
+                            data.m_open = parseFloat(json.data[i].open);
+                            data.m_volume = parseFloat(json.data[i].volume);
+                            data.m_date = parseInt(json.data[i].period);
+                            dataList.push(data);
+                            m_lastDate_Chart = json.data[i].period;
+                        }
+                        m_chart.m_data = dataList;
+                        if (m_chart.m_cycle == "trend") {
+                            var dataListNew = new Array();
+                            var startIndex = dataList.length - 240;
+                            if (startIndex < 0) {
+                                startIndex = 0;
+                            }
+                            for (var i = startIndex; i < dataList.length; i++) {
+                                dataListNew.push(m_chart.m_data[i]);
+                            }
+                            m_chart.m_data = dataListNew;
+                        }
+                        var maxVisibleRecord = getChartMaxVisibleCount(m_chart, m_chart.m_hScalePixel, getChartWorkAreaWidth(m_chart));
+                        m_chart.m_lastVisibleIndex = m_chart.m_data.length - 1;
+                        if (maxVisibleRecord > m_chart.m_data.length) {
+                            m_chart.m_firstVisibleIndex = 0;
+                        } else {
+                            m_chart.m_firstVisibleIndex = m_chart.m_lastVisibleIndex - maxVisibleRecord + 1;
+                        }
+                        resetChartVisibleRecord(m_chart);
+                        checkChartLastVisibleIndex(m_chart);
+                        calcChartIndicator(m_chart);
+                        invalidateView(m_chart, m_paintChart);
+                    } 
+                }
+                xmlhttp.send(null);
+            }
+        } else {
+            if(m_chart.m_cycle != "second" && m_chart.m_cycle != "tick"){
+                var url = "https://api.coincap.io/v2/candles?exchange=binance&interval=m1&baseId=bitcoin&quoteId=tether";
+                if (m_chart.m_cycle == "day") {
+                    url = "https://api.coincap.io/v2/candles?exchange=binance&interval=d1&baseId=bitcoin&quoteId=tether";
+                }
+                var xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("GET", url, true);
+                xmlhttp.onreadystatechange = function () {
+                    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+                        var result = xmlhttp.responseText;
+                        var json = eval('(' + result + ')');
+                        if (json.data.length > 0 && m_chart.m_data.length > 0) {
+                            for (var i = 0; i < json.data.length; i++) {
+                                if (parseFloat(json.data[i].period) >= parseFloat(m_lastDate_Chart)) {
+                                    var data = new SecurityData();
+                                    data.m_close = parseFloat(json.data[i].close);
+                                    data.m_high = parseFloat(json.data[i].high);
+                                    data.m_low = parseFloat(json.data[i].low);
+                                    data.m_open = parseFloat(json.data[i].open);
+                                    data.m_volume = parseFloat(json.data[i].volume);
+                                    data.m_date = parseInt(json.data[i].period);
+                                    if (m_chart.m_data[m_chart.m_data.length - 1].m_date == data.m_date) {
+                                        console.log("update:" + data.m_date);
+                                        m_chart.m_data[m_chart.m_data.length - 1] = data;
+                                    } else {
+                                        console.log("add:" + data.m_date);
+                                        m_chart.m_data.push(data);
+                                    }
+                                    m_lastDate_Chart = json.data[i].period;
+                                }
+                            }
+                            if (m_chart.m_cycle == "trend") {
+                                var dataListNew = new Array();
+                                var startIndex = m_chart.m_data.length - 240;
+                                if (startIndex < 0) {
+                                    startIndex = 0;
+                                }
+                                for (var i = startIndex; i < m_chart.m_data.length; i++) {
+                                    dataListNew.push(m_chart.m_data[i]);
+                                }
+                                m_chart.m_data = dataListNew;
+                            }
+                            resetChartVisibleRecord(m_chart);
+                            checkChartLastVisibleIndex(m_chart);
+                            calcChartIndicator(m_chart);
+                            invalidateView(m_chart, m_paintChart);
+                        }
+                    }
+                }
+                xmlhttp.send(null); 
+            }   
+	    }
+	    m_requareTimes_Chart++;
+    };
+
+
+    invalidate(m_paintChart);
+    queryHistoryData();
+    setInterval(queryHistoryData, 30000);
+    
+    //是否允许重绘
+    var m_allowPaint_Chart = false;
+
+    //加载次数
+    var m_loadTick_Chart = false;
+
+    /*
+    * 检查绘图
+    */
+    var checkChartPaint = function(){
+        if(m_allowPaint_Chart){
+            if(m_chart.m_data && m_chart.m_data.length > 0){
+                resetChartVisibleRecord(m_chart);
+                checkChartLastVisibleIndex(m_chart);
+                calcChartIndicator(m_chart);
+                invalidateView(m_chart, m_paintChart);
+            }
+            m_allowPaint_Chart = false;
+        }
+    };
+
+    setInterval(checkChartPaint, 300);
+
+    //上个日期
+    var m_lastDate_Chart = 0;
+
+    /*
+     * 查询数据
+     */ 
+    var queryRuntimeData = function () {
+        if(m_loadTick_Chart){
+            return;
+        }
+        m_loadTick_Chart = true;
+	    var ws = new WebSocket("wss://ws.coincap.io/trades/binance");
+	    ws.onopen = function () {
+	    };
+	    ws.onmessage = function (e) {
+	        if(m_chart.m_cycle == "second" || m_chart.m_cycle == "tick"){
+		        var json = eval('(' + e.data + ')');
+		        if (json.base == "bitcoin" && json.quote == "tether") {
+	                var thisDate = parseInt(json.timestamp);
+	                if(m_chart.m_cycle == "second"){
+	                    thisDate = parseInt(thisDate / 1000) * 1000;
+	                }
+	                var lastData = null;
+	                if(m_chart.m_data && m_chart.m_data.length > 0){
+	                    lastData = m_chart.m_data[m_chart.m_data.length - 1];
+	                }else{
+	                    m_chart.m_data = new Array();
+	                }
+	                if(lastData && lastData.m_date >= m_lastDate_Chart){
+	                    if(lastData.m_high < json.price){
+	                        lastData.m_high = json.price;
+	                    }
+	                    if(lastData.m_low > json.price){
+	                        lastData.m_low = json.price;
+	                    }
+	                    lastData.m_close = json.price;
+	                    lastData.m_volume = lastData.m_volume + json.volume;
+	                }else{
+	                    var data = new SecurityData();
+                        data.m_close = parseFloat(json.price);
+                        data.m_high = parseFloat(json.price);
+                        data.m_low = parseFloat(json.price);
+                        data.m_open = parseFloat(json.price);
+                        data.m_volume = parseFloat(json.volume);
+                        data.m_date = thisDate;
+                        m_chart.m_data.push(data);
+	                }
+	                if(m_lastDate_Chart < thisDate){
+	                    m_lastDate_Chart = thisDate;
+	                }
+                    m_allowPaint_Chart = true;
+		        }
+            }
+	    };
+	    ws.onclose = function (e) {
+		    console.log("close");
+	    };
+	    ws.onerror = function (e) {
+		    console.log(error);
+	    };
+    };
+
+    invalidate(m_paintChart);
+    </script>
+    
+    <script>
+    /*
+    * 检查弹幕
+    */
+    var checkBarrage = function(){
+        var paint = false;
+        if(m_chart.m_views){
+            for(var i = 0; i < m_chart.m_views.length; i++){
+                var view = m_chart.m_views[i];
+                if(view.m_type == "barrage"){
+                    paint = true;
+                    view.m_location.x = view.m_location.x - 5;
+                    if(view.m_location.x + view.m_size.cx < 0){
+                        m_chart.m_views.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+        }
+        if(paint){
+            invalidateView(m_chart, m_paintChart);
+        }
+    };
+    
+    setInterval(checkBarrage, 50);
+    
+    /*
+    * 发送弹幕
+    */
+    var sendBarrage = function(){
+        var text = document.getElementById('txtBarrage').value;
+        if(text.length > 0){
+            var barrage = new FCView;
+            barrage.m_backColor = null;
+            barrage.m_textColor = "rgb(255,255,255)";
+            barrage.m_borderColor = null;
+            barrage.m_location = new FCPoint(m_chart.m_size.cx, 50 + Math.random() * (m_chart.m_size.cy - 100));
+            barrage.m_size = m_paintChart.textSize(text, "16px Arial");
+            barrage.m_visible = true;
+            barrage.m_text = text;
+            barrage.m_font = "16px Arial";
+            barrage.m_type = "barrage";
+            if(!m_chart.m_views){
+                m_chart.m_views = new Array();
+            }
+            m_chart.m_views.push(barrage);
+        }
+    };
+    </script>
+<br/>
+<br/>
+<br/>
+</body>
+</html>

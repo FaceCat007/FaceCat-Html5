@@ -1,0 +1,376 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat的HTML5框架(开源)</title>
+<style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+</style>
+</head>
+<body>
+    <input type="button" value="从左至右" onclick="javascript:changeLayout('lefttoright');"/>
+    <input type="button" value="从上至下" onclick="javascript:changeLayout('toptobottom');"/>
+    <input type="button" value="从右至左" onclick="javascript:changeLayout('righttoleft');"/>
+    <input type="button" value="从下至上" onclick="javascript:changeLayout('bottomtotop');"/>
+    <input type="button" value="自动换行" onclick="javascript:changeAutoWrap(true);"/>
+    <input type="button" value="不换行" onclick="javascript:changeAutoWrap(false);"/><br/>
+    <canvas id="layoutCanvas" width="800" height="800" >
+        Your browser does not support canvas element.
+    </canvas>
+    <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_div.js" ></script>
+    <script type="text/javascript" src="facecat_layout.js" ></script>
+    <script type="text/javascript" src="facecat_btn.js" ></script>
+    <script type="text/javascript">
+    var m_canvasLayout = document.getElementById("layoutCanvas"); //绘图区域
+    var m_contextLayout = m_canvasLayout.getContext("2d"); //绘图上下文
+    m_canvasLayout.width = window.innerWidth;
+    m_canvasLayout.height = window.innerHeight;
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasLayout.style.width = m_canvasLayout.width + 'px';
+        m_canvasLayout.style.height = m_canvasLayout.height + 'px';
+        m_canvasLayout.height = m_canvasLayout.height* window.devicePixelRatio;
+        m_canvasLayout.width = m_canvasLayout.width * window.devicePixelRatio;
+        m_contextLayout.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+    var m_paintLayout = new FCPaint(); //绘图对象
+    m_paintLayout.m_defaultUIStyle = "dark";
+        var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintLayout.m_defaultUIStyle = "light";
+    }
+    m_paintLayout.m_canvas = m_canvasLayout;
+    m_canvasLayout.m_paint = m_paintLayout;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintLayout.m_scaleFactorX = 2.5;
+        m_paintLayout.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSizeLayout = new FCSize((m_canvasLayout.width / m_ratio / m_paintLayout.m_scaleFactorX), (m_canvasLayout.height / m_ratio / m_paintLayout.m_scaleFactorY));
+
+    var m_views_Layout = new Array(); //视图集合
+    m_canvasLayout.m_views = m_views_Layout;
+    
+    // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchEnd_Layout = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchEnd_Layout <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchEnd_Layout = now;
+    }, {
+        passive: false
+    });
+
+    //创建图层
+    var m_layout = new FCLayoutDiv();
+
+    //初始化图层
+    var initDiv = function(){
+         m_layout.m_paint = m_paintLayout;
+         if (m_layout.m_paint.m_defaultUIStyle == "dark") {
+            m_layout.m_backColor = "rgb(0,0,0)";
+            m_layout.m_borderColor = "rgb(100,100,100)";
+            m_layout.m_textColor = "rgb(255,255,255)";
+        } else if (m_layout.m_paint.m_defaultUIStyle == "light") {
+            m_layout.m_backColor = "rgb(255,255,255)";
+            m_layout.m_borderColor = "rgb(150,150,150)";
+            m_layout.m_textColor = "rgb(0,0,0)";
+	    }
+        m_layout.m_location = new FCPoint(0, 0);
+        m_layout.m_size = new FCSize(m_canvasSizeLayout.cx, m_canvasSizeLayout.cy);
+        m_layout.m_text = "图层";
+        m_layout.m_visible = true;
+        
+        m_layout.m_padding = new FCPadding(10, 10, 10, 10);
+        m_layout.m_autoWrap = true;
+        m_views_Layout.push(m_layout);
+        for(var i = 0; i < 100; i++){
+            var button = new FCView();
+            button.m_paint = m_paintLayout;
+            button.m_text = (i + 1);
+           if (m_layout.m_paint.m_defaultUIStyle == "dark") {
+                button.m_backColor = "rgb(0,0,0)";
+                button.m_borderColor = "rgb(100,100,100)";
+                button.m_textColor = "rgb(255,255,255)";
+            } else if (m_layout.m_paint.m_defaultUIStyle == "light") {
+                button.m_backColor = "rgb(255,255,255)";
+                button.m_borderColor = "rgb(150,150,150)";
+                button.m_textColor = "rgb(0,0,0)";
+	        }
+            button.m_font = "16px Arial";
+            button.m_size = new FCSize(100, 100);
+            button.m_location = new FCPoint(0, 0);
+            button.m_margin = new FCPadding(10, 10, 10, 10);
+            button.m_parent = m_layout;
+            m_layout.m_views.push(button);
+        }
+        resetLayoutDiv(m_layout);
+    };
+
+    initDiv();
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_Layout = function(view, mp, buttons, clicks, delta) {
+    };
+
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseDown_Layout = function(view, mp, buttons, clicks, delta) {
+	    if (view.m_type == "layout") {
+		    var firstTouch = false, secondTouch = false;
+		    var firstPoint = mp, secondPoint = mp;
+		    if (buttons == 1) {
+			    firstTouch = true;
+		    }
+		    mouseDownDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_Layout = function (view, mp, buttons, clicks, delta) {
+         if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+	    if (view.m_type == "layout") {
+	        mouseWheelDiv(view, delta);
+		    invalidateView(view, m_paintLayout);
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_Layout = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "layout") {
+		    view.m_allowDragScroll = true;
+		    mouseDownDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_Layout = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "layout") {
+            mouseMoveDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paintLayout);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_Layout = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "layout") {
+		    mouseUpDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+    };
+    
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_Layout = function (view, mp, buttons, clicks, delta) {
+        if (view.m_type == "layout") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+	        mouseMoveDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paintLayout);
+        }
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseUp_Layout = function (view, mp, buttons, clicks, delta) {
+        if (view.m_type == "layout") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+	        mouseUpDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintLayout.onPaint = function (view, paint, clipRect) {
+	    if (view.m_type == "layout") {
+	        drawDiv(view, paint, clipRect);
+	    }
+	    else{
+	        drawButton(view, paint, clipRect);
+	    }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintLayout.onPaintBorder = function (view, paint, clipRect) {
+	    if (view.m_type == "layout") {
+		    drawDivBorder(view, paint, clipRect);
+		    drawDivScrollBar(view, paint, clipRect);
+	    }
+    };
+    
+    addMouseDownEvent(m_canvasLayout, onMouseDown_Layout);
+    addMouseMoveEvent(m_canvasLayout, onMouseMove_Layout);
+    addMouseWheelEvent(m_canvasLayout, onMouseWheel_Layout);
+    addMouseUpEvent(m_canvasLayout, onMouseUp_Layout, onClick_Layout);
+    addTouchBeginEvent(m_canvasLayout, onTouchBegin_Layout);
+    addTouchMoveEvent(m_canvasLayout, onTouchMove_Layout);
+    addTouchEndEvent(m_canvasLayout, onTouchEnd_Layout, onClick_Layout);
+
+    /*
+     * 重置大小
+     */ 
+    var resizeAll = function() {
+         m_canvasLayout.width = window.innerWidth;
+        m_canvasLayout.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasLayout.style.width = m_canvasLayout.width + 'px';
+            m_canvasLayout.style.height = m_canvasLayout.height + 'px';
+            m_canvasLayout.height = m_canvasLayout.height* window.devicePixelRatio;
+            m_canvasLayout.width = m_canvasLayout.width * window.devicePixelRatio;
+            m_contextLayout.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizeLayout = new FCSize((m_canvasLayout.width / m_ratio / m_paintLayout.m_scaleFactorX), (m_canvasLayout.height / m_ratio / m_paintLayout.m_scaleFactorY));
+        m_layout.m_size = new FCSize(m_canvasSizeLayout.cx, m_canvasSizeLayout.cy);
+        resetLayoutDiv(m_layout);
+	    invalidate(m_paintLayout);
+    	
+    };
+    
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+
+    invalidate(m_paintLayout);
+     
+/*
+    * 切换布局
+    * mode:布局方式
+    */
+    var changeLayout = function(layoutStyle){
+        for(var i = 0; i < m_layout.m_views.length; i++){
+            m_layout.m_views[i].m_size = new FCSize(100, 100);
+        }
+	m_layout.m_scrollV = 0;
+	m_layout.m_scrollH = 0;
+        m_layout.m_layoutStyle = layoutStyle;
+        resetLayoutDiv(m_layout);
+	    invalidate(m_paintLayout);
+    };
+    
+    /*
+    * 切换模式
+    */
+    var changeAutoWrap = function(autoWrap){
+        m_layout.m_autoWrap = autoWrap;
+        changeLayout(m_layout.m_layoutStyle);
+    };
+    </script>
+</body>
+</html>

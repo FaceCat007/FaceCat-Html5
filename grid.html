@@ -1,0 +1,516 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+    <meta http-equiv="expires" content="0" />
+    <title>FaceCat的HTML5框架(开源)</title>
+    <style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+</style>
+</head>
+<body>
+    <canvas id="gridCanvas" width="1000" height="700">
+        Your browser does not support canvas element.
+    </canvas>
+    <script type="text/javascript" src="facecat.js"></script>
+    <script type="text/javascript" src="facecat_grid.js"></script>
+    <script type="text/javascript" src="facecat_div.js"></script>
+
+    <script type="text/javascript">
+    var m_canvasGrid = document.getElementById("gridCanvas"); //绘图区域
+    var m_contextGrid = m_canvasGrid.getContext("2d"); //绘图上下文
+    m_canvasGrid.width = window.innerWidth;
+    m_canvasGrid.height = window.innerHeight;
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasGrid.style.width = m_canvasGrid.width + 'px';
+        m_canvasGrid.style.height = m_canvasGrid.height + 'px';
+        m_canvasGrid.height = m_canvasGrid.height* window.devicePixelRatio;
+        m_canvasGrid.width = m_canvasGrid.width * window.devicePixelRatio;
+        m_contextGrid.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+
+    var m_paintGrid = new FCPaint(); //绘图对象
+    m_paintGrid.m_defaultUIStyle = "dark";
+        var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintGrid.m_defaultUIStyle = "light";
+    }
+    m_paintGrid.m_canvas = m_canvasGrid;
+    m_canvasGrid.m_paint = m_paintGrid;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintGrid.m_scaleFactorX = 2.5;
+        m_paintGrid.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSizeGrid = new FCSize((m_canvasGrid.width / m_ratio / m_paintGrid.m_scaleFactorX), (m_canvasGrid.height / m_ratio / m_paintGrid.m_scaleFactorY));
+
+    var m_views_Grid = new Array(); //视图集合
+    m_canvasGrid.m_views = m_views_Grid;
+    
+    // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchEnd_Grid = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchEnd_Grid <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchEnd_Grid = now;
+    }, {
+        passive: false
+    });
+
+    //创建表格
+    var m_grid = new FCGrid();
+    
+    /*
+    * 创建列
+    * grid:表格
+    */
+    var createGridColumn = function(grid){
+        var gridColumn = new FCGridColumn();
+        if (grid.m_paint.m_defaultUIStyle == "dark") {
+            gridColumn.m_backColor = "rgb(0,0,0)";
+            gridColumn.m_borderColor = "rgb(150,150,150)";
+            gridColumn.m_textColor = "rgb(255,255,255)";
+        } else if (grid.m_paint.m_defaultUIStyle == "light") {
+            gridColumn.m_backColor = "rgb(200,200,200)";
+            gridColumn.m_borderColor = "rgb(100,100,100)";
+            gridColumn.m_textColor = "rgb(0,0,0)";
+	    }
+	    return gridColumn;
+    };
+    
+        /*
+    * 创建列
+    * grid:表格
+    */
+    var createGridCell = function(grid){
+        var gridCell = new FCGridCell();
+        if (grid.m_paint.m_defaultUIStyle == "dark") {
+            gridCell.m_backColor = "rgb(0,0,0)";
+            gridCell.m_borderColor = "rgb(150,150,150)";
+            gridCell.m_textColor = "rgb(255,255,255)";
+        } else if (grid.m_paint.m_defaultUIStyle == "light") {
+            gridCell.m_backColor = "rgb(255,255,255)";
+            gridCell.m_borderColor = "rgb(100,100,100)";
+            gridCell.m_textColor = "rgb(0,0,0)";
+	    }
+	    return gridCell;
+    };
+    
+    /*
+    * 初始化表格
+    */
+    var initGrid = function(){
+       m_grid.m_paint = m_paintGrid;
+       if (m_grid.m_paint.m_defaultUIStyle == "dark") {
+            m_grid.m_backColor = "rgb(0,0,0)";
+            m_grid.m_borderColor = "rgb(100,100,100)";
+            m_grid.m_textColor = "rgb(255,255,255)";
+        } else if (m_grid.m_paint.m_defaultUIStyle == "light") {
+            m_grid.m_backColor = "rgb(255,255,255)";
+            m_grid.m_borderColor = "rgb(150,150,150)";
+            m_grid.m_textColor = "rgb(0,0,0)";
+	    }
+        
+        m_grid.m_location = new FCPoint(0, 0);
+        m_grid.m_size = new FCSize(m_canvasSizeGrid.cx, m_canvasSizeGrid.cy);
+        m_grid.m_visible = true;
+        m_views_Grid.push(m_grid);
+         //增加列
+	    var column1 = createGridColumn(m_grid);
+	    column1.m_text = "id";
+	    column1.m_frozen = true;
+	    column1.m_width = 90;
+	    m_grid.m_columns.push(column1);
+
+	    var column2 = createGridColumn(m_grid);
+	    column2.m_text = "rank";
+	    column2.m_width = 40;
+	    column2.m_frozen = true;
+	    m_grid.m_columns.push(column2);
+
+	    var column3 = createGridColumn(m_grid);
+	    column3.m_text = "symbol";
+	    column3.m_width = 60;
+	    column3.m_frozen = true;
+	    m_grid.m_columns.push(column3);
+
+	    var column4 = createGridColumn(m_grid);
+	    column4.m_text = "name";
+	    column4.m_width = 60;
+	    m_grid.m_columns.push(column4);
+
+	    var column10 = createGridColumn(m_grid);
+	    column10.m_text = "changePercent24Hr";
+	    m_grid.m_columns.push(column10);
+	    column10.m_width = 140;
+
+	    var column11 = createGridColumn(m_grid);
+	    column11.m_text = "vwap24Hr";
+	    m_grid.m_columns.push(column11);
+	    column11.m_width = 140;
+
+	    var column5 = createGridColumn(m_grid);
+	    column5.m_text = "supply";
+	    m_grid.m_columns.push(column5);
+
+	    var column6 = createGridColumn(m_grid);
+	    column6.m_text = "maxSupply";
+	    m_grid.m_columns.push(column6);
+
+	    var column7 = createGridColumn(m_grid);
+	    column7.m_text = "marketCapUsd";
+	    m_grid.m_columns.push(column7);
+
+	    var column8 = createGridColumn(m_grid);
+	    column8.m_text = "volumeUsd24Hr";
+	    m_grid.m_columns.push(column8);
+
+	    var column9 = createGridColumn(m_grid);
+	    column9.m_text = "priceUsd";
+	    m_grid.m_columns.push(column9);
+    }
+    
+    initGrid();
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_Grid = function(view, mp, buttons, clicks, delta) {
+        
+    };
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseDown_Grid = function(view, mp, buttons, clicks, delta) {
+        if (view.m_type == "grid") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+		    mouseDownGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paintGrid);
+        }
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_Grid = function (view, mp, buttons, clicks, delta) {
+        if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+	    if (view.m_type == "grid") {
+		    mouseWheelGrid(view, delta);
+	        invalidateView(view, m_paintGrid);
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_Grid = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "grid") {
+		    view.m_allowDragScroll = true;
+		    mouseDownGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_Grid = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "grid") {
+            mouseMoveGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paintGrid);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_Grid = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "grid") {
+		    mouseUpGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paintGrid);
+	    }
+    };
+
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_Grid = function (view, mp, buttons, clicks, delta) {
+        if (view.m_type == "grid") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+            mouseMoveGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paintGrid);
+        }
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseUp_Grid = function (view, mp, buttons, clicks, delta) {
+        if (view.m_type == "grid") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+            mouseUpGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paintGrid);
+        }
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintGrid.onPaint = function (view, paint, clipRect) {
+       if(view.m_type == "grid"){
+            drawDiv(view, paint, clipRect);
+	       drawGrid(view, paint, clipRect);
+	    }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintGrid.onPaintBorder = function (view, paint, clipRect) {
+	    if (view.m_type == "grid") {
+	        drawDivBorder(view, paint, clipRect);
+		    drawGridScrollBar(view, paint, clipRect);
+	    }
+    };
+    
+    /*
+    * 表格的鼠标点击方法
+    * grid: 表格
+    * row: 行
+    * column: 列
+    * cell: 单元格
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    m_paintGrid.onClickGridCell = function(grid, row, column, cell, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+    
+    /*
+    * 表格的列点击方法
+    * grid: 表格
+    * column: 列
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    m_paintGrid.onClickGridColumn = function(grid, gridColumn, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+    
+    addMouseDownEvent(m_canvasGrid, onMouseDown_Grid);
+    addMouseMoveEvent(m_canvasGrid, onMouseMove_Grid);
+    addMouseWheelEvent(m_canvasGrid, onMouseWheel_Grid);
+    addMouseUpEvent(m_canvasGrid, onMouseUp_Grid, onClick_Grid);
+    addTouchBeginEvent(m_canvasGrid, onTouchBegin_Grid);
+    addTouchMoveEvent(m_canvasGrid, onTouchMove_Grid);
+    addTouchEndEvent(m_canvasGrid, onTouchEnd_Grid, onClick_Grid);
+
+    /*
+    * 重置大小 
+    */
+    var resizeAll = function() {
+        m_canvasGrid.width = window.innerWidth;
+        m_canvasGrid.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasGrid.style.width = m_canvasGrid.width + 'px';
+            m_canvasGrid.style.height = m_canvasGrid.height + 'px';
+            m_canvasGrid.height = m_canvasGrid.height* window.devicePixelRatio;
+            m_canvasGrid.width = m_canvasGrid.width * window.devicePixelRatio;
+            m_contextGrid.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizeGrid = new FCSize((m_canvasGrid.width / m_ratio / m_paintGrid.m_scaleFactorX), (m_canvasGrid.height / m_ratio / m_paintGrid.m_scaleFactorY));
+        m_grid.m_size = new FCSize(m_canvasSizeGrid.cx, m_canvasSizeGrid.cy);
+	    invalidate(m_paintGrid);
+    };
+    
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+
+    /*
+     * 查询数据
+     */ 
+    var queryGridData = function () {
+	    var url = "https://api.coincap.io/v2/assets?limit=2000";
+	    var xmlhttp = new XMLHttpRequest();
+	    xmlhttp.open("GET", url, true);
+	    xmlhttp.onreadystatechange = function () {
+		    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+			    var result = xmlhttp.responseText;
+			    var json = eval('(' + result + ')');
+			    if (json.data.length > 0) {
+				    for (var i = 0; i < json.data.length; i++) {
+					    var row = new FCGridRow();
+					    m_grid.m_rows.push(row);
+					    var cell1 = createGridCell(m_grid);
+					    cell1.m_value = json.data[i].id;
+					    row.m_cells.push(cell1);
+
+					    var cell2 = createGridCell(m_grid);
+					    cell2.m_value = json.data[i].rank;
+					    row.m_cells.push(cell2);
+
+					    var cell4 = createGridCell(m_grid);
+					    cell4.m_value = json.data[i].name;
+					    row.m_cells.push(cell4);
+
+					    var cell3 = createGridCell(m_grid);
+					    cell3.m_value = json.data[i].symbol;
+					    row.m_cells.push(cell3);
+					    cell3.m_textColor = "rgb(255,255,0)";
+
+					    var cell10 = createGridCell(m_grid);
+					    cell10.m_value = json.data[i].changePercent24Hr;
+					    row.m_cells.push(cell10);
+					    if (parseFloat(cell10.m_value) >= 0) {
+						    cell10.m_textColor = "rgb(219,68,83)";
+					    } else {
+						    cell10.m_textColor = "rgb(15,193,118)";
+					    }
+
+					    var cell11 = createGridCell(m_grid);
+					    cell11.m_value = json.data[i].vwap24Hr;
+					    cell11.m_textColor = "rgb(0,255,255)";
+					    row.m_cells.push(cell11);
+
+					    var cell5 = createGridCell(m_grid);
+					    cell5.m_value = json.data[i].supply;
+					    row.m_cells.push(cell5);
+
+					    var cell6 = createGridCell(m_grid);
+					    cell6.m_value = json.data[i].maxSupply;
+					    row.m_cells.push(cell6);
+
+					    var cell7 = createGridCell(m_grid);
+					    cell7.m_value = json.data[i].marketCapUsd;
+					    row.m_cells.push(cell7);
+
+					    var cell8 = createGridCell(m_grid);
+					    cell8.m_value = json.data[i].volumeUsd24Hr;
+					    row.m_cells.push(cell8);
+
+					    var cell9 = createGridCell(m_grid);
+					    cell9.m_value = json.data[i].priceUsd;
+					    row.m_cells.push(cell9);
+				    }
+			    }
+			    invalidateView(m_grid, m_paintGrid);
+		    }
+	    }
+	    xmlhttp.send(null);
+    };
+
+    invalidate(m_paintGrid);
+    queryGridData();
+    </script>
+
+</body>
+</html>

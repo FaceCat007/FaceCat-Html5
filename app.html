@@ -1,0 +1,2035 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat的HTML5框架(开源)</title>
+<style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+</style>
+</head>
+<body>
+    <canvas id="tabCanvas" width="500" height="700" >
+        Your browser does not support canvas element.
+    </canvas>
+   <script type="text/javascript" src="facecat.js" ></script>
+   <script type="text/javascript" src="facecat_tab.js" ></script>
+   <script type="text/javascript" src="facecat_grid.js" ></script>
+   <script type="text/javascript" src="facecat_tree.js" ></script>
+   <script type="text/javascript" src="facecat_date.js" ></script>
+   <script type="text/javascript" src="facecat_chart.js" ></script>
+   <script type="text/javascript" src="facecat_div.js" ></script>
+      <script type="text/javascript" src="facecat_btn.js" ></script>
+   <script type="text/javascript">
+   var m_canvasApp = document.getElementById("tabCanvas"); //绘图区域
+   m_canvasApp.width = window.innerWidth;
+   m_canvasApp.height = window.innerHeight;
+    var m_contextApp = m_canvasApp.getContext("2d"); //绘图上下文
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasApp.style.width = m_canvasApp.width + 'px';
+        m_canvasApp.style.height = m_canvasApp.height + 'px';
+        m_canvasApp.height = m_canvasApp.height* window.devicePixelRatio;
+        m_canvasApp.width = m_canvasApp.width * window.devicePixelRatio;
+        m_contextApp.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+    var m_paintApp = new FCPaint(); //绘图对象
+    m_paintApp.m_canvas = m_canvasApp;
+    m_canvasApp.m_paint = m_paintApp;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintApp.m_scaleFactorX = 2.5;
+        m_paintApp.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSizeApp = new FCSize((m_canvasApp.width / m_ratio / m_paintApp.m_scaleFactorX), (m_canvasApp.height / m_ratio / m_paintApp.m_scaleFactorY));
+
+    m_paintApp.m_defaultUIStyle = "dark";
+       var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintApp.m_defaultUIStyle = "light";
+    }
+
+
+    var m_views_App = new Array(); //视图集合
+    m_canvasApp.m_views = m_views_App;
+   
+   // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchEnd_App = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchEnd_App <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchEnd_App = now;
+    }, {
+        passive: false
+    });
+    </script>
+    
+    <script type="text/javascript">
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_App = function(view, mp, buttons, clicks, delta) {
+        if(view.m_type == "tabbutton"){
+            var tabView = view.m_parent;
+            var oldPage = null;
+            for(var i = 0; i < m_tabView.m_tabPages.length; i++){
+                if(tabView.m_tabPages[i].m_visible){
+                    oldPage = tabView.m_tabPages[i];
+                    break;
+                }
+            }
+            for(var i = 0; i < tabView.m_tabPages.length; i++){
+                if(tabView.m_tabPages[i].m_headerButton == view){
+                    selectTabPage(tabView, tabView.m_tabPages[i]);
+                    if(oldPage){
+                        startTabPageAnimation(tabView.m_tabPages[i], oldPage);
+                    }
+                    break;
+                }
+            }
+            invalidateView(tabView, m_paintApp);
+        }
+        if (view.m_name == "Indicator") {
+            if (view.m_text == "BOLL" || view.m_text == "MA") {
+                m_chart.m_mainIndicator = view.m_text;
+            } else {
+                m_chart.m_showIndicator = view.m_text;
+            }
+            calcChartIndicator(m_chart);
+            invalidateView(m_chart, m_paintApp);
+        }else if(view.m_name == "Plot"){
+            m_addingPlot_Chart = view.m_tag;
+        }else if(view.m_name == "Function"){
+            if(view.m_text == "白色"){
+                toWhite_Chart();
+	            invalidateView(m_chart, m_paintApp);
+            }else if(view.m_text == "黑色"){
+                toBlack_Chart();
+	            invalidateView(m_chart, m_paintApp);
+            }else if(view.m_text == "标准坐标"){
+                m_chart.m_vScaleType = "standard";
+	            invalidateView(m_chart, m_paintApp);
+            }else if(view.m_text == "对数坐标"){
+                m_chart.m_vScaleType = "log10";
+	            invalidateView(m_chart, m_paintApp);
+            }else if(view.m_text == "1分钟线"){
+                m_chart.m_cycle = "minute";
+                m_requareTimes_Chart = 0;
+                m_lastDate_Chart = "";
+                queryHistoryData();
+            }else if(view.m_text == "日线"){
+                m_chart.m_cycle = "day";
+                m_requareTimes_Chart = 0;
+                m_lastDate_Chart = "";
+                queryHistoryData();
+            }else if(view.m_text == "分时线"){
+                m_chart.m_cycle = "trend";
+                m_requareTimes_Chart = 0;
+                m_lastDate_Chart = "";
+                queryHistoryData();
+            }
+            else if(view.m_text == "秒线"){
+                m_chart.m_cycle = "second";
+                m_requareTimes_Chart = 0;
+                m_lastDate_Chart = "";
+                m_chart.m_crossStopIndex = -1;
+                m_chart.m_plots = new Array();
+                m_chart.m_sPlot = null;
+                m_chart.m_selectShape = ""; 
+                m_chart.m_selectShapeEx = ""; 
+                m_chart.m_data = null;
+                m_chart.m_autoFillHScale = false;
+                m_chart.m_hScalePixel = 11;
+                invalidateView(m_chart, m_paintApp);
+                queryRuntimeData();
+            }
+             else if(view.m_text == "TICK图"){
+                m_chart.m_cycle = "tick";
+                m_requareTimes_Chart = 0;
+                m_lastDate_Chart = "";
+                m_chart.m_crossStopIndex = -1;
+                m_chart.m_plots = new Array();
+                m_chart.m_sPlot = null;
+                m_chart.m_selectShape = ""; 
+                m_chart.m_selectShapeEx = ""; 
+                m_chart.m_data = null;
+                m_chart.m_autoFillHScale = false;
+                m_chart.m_hScalePixel = 11;
+                invalidateView(m_chart, m_paintApp);
+                queryRuntimeData();
+            }
+            else if(view.m_text == "清除画线"){
+                m_chart.m_plots = new Array();
+                m_chart.m_sPlot = null;
+	            invalidateView(m_chart, m_paintApp);
+            }else if(view.m_text == "切换到最近"){
+                m_chart.m_lastVisibleIndex = m_chart.m_data.length;
+                checkChartLastVisibleIndex(m_chart);
+                resetChartVisibleRecord(m_chart);
+                calculateChartMaxMin(m_chart);
+	            invalidateView(m_chart, m_paintApp);
+            }
+        }
+    };
+
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseDown_App = function(view, mp, buttons, clicks, delta) {
+	    if(view){
+            var firstTouch = false, secondTouch = false;
+	        var firstPoint = mp, secondPoint = mp;
+	        if (buttons == 1) {
+		        firstTouch = true;
+	        }
+	        if (view.m_type == "grid" || view.m_type == "gridlog" || view.m_type == "bidsell" || view.m_type == "price") {
+		        mouseDownGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	        }
+	        if (view.m_type == "tree") {
+		        mouseDownTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            }
+	    }
+	    if (view.m_type == "calendar") {
+		    clickCalendar(mp, view);
+	    }
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_App = function (view, mp, buttons, clicks, delta) {
+        if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+    	if (view.m_type == "grid" || view.m_type == "gridlog" || view.m_type == "bidsell" || view.m_type == "price") {
+		    mouseWheelGrid(view, delta);
+		    invalidateView(view, m_paintApp);
+	    }
+	    
+	    else if (view.m_type == "tree") {
+	        mouseWheelTree(view, delta);
+	        invalidateView(view, m_paintApp);
+	    }
+	    else if (view.m_type == "chart") {
+            if(delta > 0){
+                zoomOutChart(view);
+            }else if(delta < 0){
+                zoomInChart(view);
+            }
+            invalidateView(m_chart, m_paintApp);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_App = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "grid" || view.m_type == "gridlog" || view.m_type == "bidsell" || view.m_type == "price") {
+	        mouseDownGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+        if (view.m_type == "tree") {
+	        mouseDownTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+	    if (view.m_type == "calendar") {
+		    clickCalendar(firstPoint, view);
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_App = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "grid" || view.m_type == "gridlog" || view.m_type == "bidsell" || view.m_type == "price") {
+	        mouseMoveGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	        invalidateView(view, m_paintApp);
+        }
+        if (view.m_type == "tree") {
+	        mouseMoveTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	        invalidateView(view, m_paintApp);
+        }
+        if (view.m_type == "chart"){
+            mouseMoveChart(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paintApp);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_App = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "grid" || view.m_type == "gridlog" || view.m_type == "bidsell" || view.m_type == "price") {
+		    mouseUpGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "tree"){
+		    mouseUpTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "chart") {
+            m_firstTouchIndexCache_Chart = -1;
+            m_secondTouchIndexCache_Chart = -1;
+        }
+        invalidateView(view, m_paintApp);
+    };
+
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_App = function (view, mp, buttons, clicks, delta) {
+        if(view.m_type){
+            var firstTouch = false, secondTouch = false;
+		    var firstPoint = mp, secondPoint = mp;
+		    if (buttons == 1) {
+			    firstTouch = true;
+		    }
+		    if (view.m_type == "grid" || view.m_type == "gridlog" || view.m_type == "bidsell" || view.m_type == "price") {
+		        mouseMoveGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		        invalidateView(view, m_paintApp);
+	        }
+	        if (view.m_type == "tree") {
+		        mouseMoveTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		        invalidateView(view, m_paintApp);
+            }
+            if(view.m_type == "chart"){
+	            mouseMoveChart(view, firstTouch, secondTouch, firstPoint, secondPoint);
+                invalidateView(m_chart, m_paintApp);
+            }
+        }
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseUp_App = function (view, mp, buttons, clicks, delta) {
+        if(view.m_type){
+            var firstTouch = false, secondTouch = false;
+		    var firstPoint = mp, secondPoint = mp;
+		    if (buttons == 1) {
+			    firstTouch = true;
+		    }
+		    if (view.m_type == "grid" || view.m_type == "gridlog" || view.m_type == "bidsell" || view.m_type == "price") {
+		        mouseUpGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	        }
+	        if (view.m_type == "tree") {
+		        mouseUpTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            }
+            if (view.m_type == "chart") {
+                m_firstTouchIndexCache_Chart = -1;
+                m_secondTouchIndexCache_Chart = -1;
+            }
+            invalidateView(view, m_paintApp);
+        }
+    };
+    
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintApp.onPaint = function (view, paint, clipRect) {
+        try{
+        if (view.m_type == "grid" || view.m_type == "gridlog" || view.m_type == "bidsell" || view.m_type == "price") {
+                drawDiv(view, paint, clipRect);
+		        drawGrid(view, paint, clipRect);
+	        }
+	        else if (view.m_type == "tree") {
+	            drawDiv(view, paint, clipRect);
+		        drawTree(view, paint, clipRect);
+	        }else if(view.m_type == "calendar") {
+	            drawCalendar(view, paint);
+	        }
+	        else if(view.m_type == "chart"){
+	            drawChart(view, paint, clipRect);
+	        }
+	        else if (view.m_type == "tabview"){
+	            drawDiv(view, paint, clipRect);
+	        }
+	        else{
+	            drawButton(view, paint, clipRect);
+            }
+         }catch(err){
+            //alert(err);
+         }
+    };
+    
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintApp.onPaintBorder = function (view, paint, clipRect) {
+        if (view.m_type == "grid" || view.m_type == "gridlog" || view.m_type == "bidsell" || view.m_type == "price") {
+            drawDivBorder(view, paint, clipRect);
+	        drawGridScrollBar(view, paint, clipRect);
+        }else if (view.m_type == "tree"){
+            drawDivBorder(view, paint, clipRect);
+		    drawTreeScrollBar(view, paint, clipRect);
+	    }else if (view.m_type == "tabview"){
+	        drawTabViewBorder(view, paint, clipRect);
+	    }
+    };
+    
+        
+    /*
+    * 绘制列
+    * grid:表格
+    * column:列
+    * paint:绘图对象
+    * left:左侧坐标
+    * top:上方坐标
+    * right:右侧坐标
+    * bottom:下方坐标
+    */
+    m_paintApp.onPaintGridColumn = function (grid, column, paint, left, top, right, bottom) {
+        if(grid.m_type && grid.m_type == "price"){
+             var width = right - left, height = bottom - top;
+             var font2 = "14px Arial";
+             var tSize = paint.textSize("市场 / 成交额", font2);
+             if (grid.m_paint.m_defaultUIStyle == "dark") {
+              paint.fillRect("rgb(0,0,0)", left, top, right, bottom);
+                 paint.drawText("市场 / 成交额", "rgb(200,200,200)", font2, left + 5, top + height / 2);
+                 paint.drawText("最新价", "rgb(200,200,200)", font2, left + width * 0.4 + 5, top + height / 2);
+                 paint.drawText("24h涨跌", "rgb(200,200,200)", font2, left + width * 0.7 + 5, top + height / 2);
+             }else if (grid.m_paint.m_defaultUIStyle == "light") {
+              paint.fillRect("rgb(255,255,255)", left, top, right, bottom);
+                paint.drawText("市场 / 成交额", "rgb(50,50,50)", font2, left + 5, top + height / 2);
+                 paint.drawText("最新价", "rgb(50,50,50)", font2, left + width * 0.4 + 5, top + height / 2);
+                 paint.drawText("24h涨跌", "rgb(50,50,50)", font2, left + width * 0.7 + 5, top + height / 2);
+             }
+         }else{
+            drawGridColumn(grid, column, paint, left, top, right, bottom);
+         }
+    };
+    
+    /*
+    * 绘制单元格
+    * grid:表格
+    * row:行
+    * column:列
+    * cell:单元格
+    * paint:绘图对象
+    * left:左侧坐标
+    * top:上方坐标
+    * right:右侧坐标
+    * bottom:下方坐标
+    */
+    m_paintApp.onPaintGridCell = function (grid, row, column, cell, paint, left, top, right, bottom) {
+        if(grid.m_type && grid.m_type == "bidsell"){
+	        if (m_maxVolume_BidSell > 0) {
+		        var volMaxWidth = right - left - 10;
+		        var thisWidth = cell.m_vol / m_maxVolume_BidSell * volMaxWidth;
+		        if (cell.m_direction == "buy") {
+			        paint.fillRect(m_upColor2_BidSell, right - 10 - thisWidth, top + 1, right - 10, bottom - 1);
+			        paint.drawText(cell.m_price, m_upColor_BidSell, cell.m_font, 10, top + (bottom - top) / 2);
+		        } else if (cell.m_direction == "sell") {
+			        paint.fillRect(m_downColor2_BidSell, right - 10 - thisWidth, top + 1, right - 10, bottom - 1);
+			        paint.drawText(cell.m_price, m_downColor_BidSell, cell.m_font, 10, top + (bottom - top) / 2);
+		        }
+		        var volText = cell.m_vol.toFixed(5);
+		        var volSize = paint.textSize(volText, cell.m_font);
+		        paint.drawText(volText, m_textColor_BidSell, cell.m_font, right - volSize.cx - 20, top + (bottom - top) / 2);
+            }
+        }else if(grid.m_type && grid.m_type == "price"){
+            var width = right - left, height = bottom - top;
+            var baseUpper = cell.m_data.base.toUpperCase();
+            var font1 = "16px Arial";
+            var font2 = "14px Arial";
+            var font3 = "12px Arial";
+            var tSize = paint.textSize(baseUpper, font1);
+            var quoteUpper = " / " + cell.m_data.quote.toUpperCase();
+            var strVolume = cell.m_data.volume.toFixed(6);
+            var strPrice = cell.m_data.price.toFixed(6);
+            var tSize2 = paint.textSize(strVolume, font3);
+            var tSize3 = paint.textSize(strPrice, font2);
+            var strPrice2 = "¥" + (cell.m_data.price * 7.24).toFixed(6);
+            var diffRange = ((cell.m_data.price - cell.m_firstPrice) / cell.m_data.price * 100).toFixed(2) + "%";
+             if (grid.m_paint.m_defaultUIStyle == "dark") {
+               paint.drawText(baseUpper, "rgb(255,255,255)", font1, left + 5, top + height / 2 - tSize2.cy);
+                paint.drawText(quoteUpper, "rgb(200,200,200)", font3, left + 5 + tSize.cx, top + height / 2 - tSize2.cy);
+                paint.drawText(strVolume, "rgb(200,200,200)", font3, left + 5, top + height / 2 + tSize2.cy);
+            } else if (grid.m_paint.m_defaultUIStyle == "light") {
+                paint.drawText(baseUpper, "rgb(0,0,0)", font1, left + 5, top + height / 2 - tSize2.cy);
+                paint.drawText(quoteUpper, "rgb(50,50,50)", font3, left + 5 + tSize.cx, top + height / 2 - tSize2.cy);
+                paint.drawText(strVolume, "rgb(50,50,50)", font3, left + 5, top + height / 2 + tSize2.cy);
+	        }
+
+            var tSize5 = paint.textSize("100000.00%", font1);
+            var colRect = new FCRect(left + width * 0.7 + 5, top + height / 2 - tSize5.cy, left + width * 0.7 + 5 + tSize5.cx, top + height / 2 + tSize5.cy);
+            var color = m_downColor_Price;
+            if(cell.m_data.price >= cell.m_firstPrice){
+                color = m_upColor_Price;
+            }
+            paint.drawText(strPrice, color, font2, left + width * 0.4 + 5, top + height / 2 - tSize3.cy);
+            paint.drawText(strPrice2, color, font2, left + width * 0.4 + 5, top + height / 2 + tSize3.cy);
+            paint.fillRect(color, colRect.left, colRect.top, colRect.right, colRect.bottom);
+            var tSize4 = paint.textSize(diffRange, font1);
+             if (grid.m_paint.m_defaultUIStyle == "dark") {
+                paint.drawText(diffRange, "rgb(255,255,255)", font1, left + width * 0.7 + 5 + tSize5.cx / 2 - tSize4.cx / 2, top + height / 2);
+            }else if (grid.m_paint.m_defaultUIStyle == "light") {
+                paint.drawText(diffRange, "rgb(0,0,0)", font1, left + width * 0.7 + 5 + tSize5.cx / 2 - tSize4.cx / 2, top + height / 2);
+            }
+        }
+        else{
+            drawGridCell(grid, row, column, cell, paint, left, top, right, bottom);
+        }
+    };
+    
+    addMouseDownEvent(m_canvasApp, onMouseDown_App);
+    addMouseMoveEvent(m_canvasApp, onMouseMove_App);
+    addMouseWheelEvent(m_canvasApp, onMouseWheel_App);
+    addMouseUpEvent(m_canvasApp, onMouseUp_App, onClick_App);
+    addTouchBeginEvent(m_canvasApp, onTouchBegin_App);
+    addTouchMoveEvent(m_canvasApp, onTouchMove_App);
+    addTouchEndEvent(m_canvasApp, onTouchEnd_App, onClick_App);
+    
+    /*
+     * 重置大小
+     */ 
+    var resizeAll = function() {
+        try{
+            m_canvasApp.width = window.innerWidth;
+            m_canvasApp.height = window.innerHeight;
+            //缩放高清模式
+            if (window.devicePixelRatio) {
+                m_canvasApp.style.width = m_canvasApp.width + 'px';
+                m_canvasApp.style.height = m_canvasApp.height + 'px';
+                m_canvasApp.height = m_canvasApp.height* window.devicePixelRatio;
+                m_canvasApp.width = m_canvasApp.width * window.devicePixelRatio;
+                m_contextApp.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+            m_canvasSizeApp = new FCSize((m_canvasApp.width / m_ratio / m_paintApp.m_scaleFactorX), (m_canvasApp.height / m_ratio / m_paintApp.m_scaleFactorY));
+            m_tabView.m_size = new FCSize(m_canvasSizeApp.cx, m_canvasSizeApp.cy);
+            for(var i = 0; i < m_tabView.m_tabPages.length; i++){
+                m_tabView.m_tabPages[i].m_headerButton.m_size.cx = m_tabView.m_size.cx / 6;
+            }
+            updateTabLayout(m_tabView);
+            m_gridLog.m_size = new FCSize(m_tabView.m_tabPages[4].m_size.cx, m_tabView.m_tabPages[4].m_size.cy);
+            if(m_showDemoTool_Chart){
+                m_chart.m_size = new FCSize(m_tabView.m_tabPages[1].m_size.cx, m_tabView.m_tabPages[1].m_size.cy - 120);
+            }else{
+                 m_chart.m_size = new FCSize(m_tabView.m_tabPages[1].m_size.cx, m_tabView.m_tabPages[1].m_size.cy);
+            }
+            m_bidSell.m_size = new FCSize(m_tabView.m_tabPages[2].m_size.cx, m_tabView.m_tabPages[2].m_size.cy);
+            m_calendar.m_size = new FCSize(m_tabView.m_tabPages[3].m_size.cx, m_tabView.m_tabPages[3].m_size.cy);
+            m_tree.m_size = new FCSize(m_tabView.m_tabPages[5].m_size.cx, m_tabView.m_tabPages[5].m_size.cy);
+            m_priceList.m_size = new FCSize(m_tabView.m_tabPages[0].m_size.cx, m_tabView.m_tabPages[0].m_size.cy);
+            updateCalendar(m_calendar);
+            m_bidSell.m_columns[0].m_width = m_bidSell.m_size.cx;
+            m_tree.m_columns[0].m_width = m_tree.m_size.cx;
+            m_priceList.m_columns[0].m_width = m_priceList.m_size.cx;
+            resetChartVisibleRecord(m_chart);
+            checkChartLastVisibleIndex(m_chart);
+            calculateChartMaxMin(m_chart);
+        }catch(err){
+        }
+	    invalidate(m_paintApp);
+    };
+    
+   /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+    };
+    
+   </script>
+    
+    <script type="text/javascript">
+    //创建多页夹
+    var m_tabView = new FCTabView();
+
+    /*
+    * 初始化多页夹
+    */
+    var initTab = function(){
+        var titles = new Array();
+        titles.push("报价");
+        titles.push("K线");
+        titles.push("买卖档");
+        titles.push("日历");
+        titles.push("日志");
+        titles.push("品种");
+        m_tabView.m_location = new FCPoint(0, 0);
+        m_tabView.m_size = new FCSize(m_canvasSizeApp.cx, m_canvasSizeApp.cy);
+        m_tabView.m_visible = true;
+        m_tabView.m_layout = "bottom";
+        m_tabView.m_paint = m_paintApp;
+        if (m_tabView.m_paint.m_defaultUIStyle == "dark") {
+            m_tabView.m_backColor = "rgb(0,0,0)";
+            m_tabView.m_borderColor = "rgb(100,100,100)";
+            m_tabView.m_textColor = "rgb(255,255,255)";
+        } else if (m_tabView.m_paint.m_defaultUIStyle == "light") {
+            m_tabView.m_backColor = "rgb(255,255,255)";
+            m_tabView.m_borderColor = "rgb(150,150,150)";
+            m_tabView.m_textColor = "rgb(0,0,0)";
+	    }
+        m_tabView.m_underLineColor = "rgb(255,215,0)";
+        m_tabView.m_underLineSize = 5;
+        m_tabView.m_useAnimation = true;
+        m_views_App.push(m_tabView);
+
+        for(var i = 0; i < titles.length; i++){
+            var tabPage = new FCTabPage();
+            if(i == 0){
+                tabPage.m_visible = true;
+            }else{
+                tabPage.m_visible = false;
+            }
+            tabPage.m_size = new FCSize(100, 100);
+            tabPage.m_location = new FCSize(0, 0);
+            var tabButton = new FCView();
+            tabButton.m_type = "tabbutton";
+            tabButton.m_text = titles[i];
+            tabButton.m_visible = true;
+            tabButton.m_size = new FCSize(m_tabView.m_size.cx / 6, 40);
+            tabButton.m_location = new FCSize(0, 0);
+           
+           tabButton.m_font = "12px Arial";
+            addTabPage(m_tabView, tabPage, tabButton);
+             tabButton.m_borderColor = null;
+             if (m_tabView.m_paint.m_defaultUIStyle == "dark") {
+                tabButton.m_backColor = "rgb(0,0,0)";
+                tabButton.m_textColor = "rgb(255,255,255)";
+                tabPage.m_backColor = "rgb(0,0,0)";
+                tabPage.m_borderColor = "rgb(150,150,150)";
+            } else if (m_tabView.m_paint.m_defaultUIStyle == "light") {
+                tabButton.m_backColor = "rgb(255,255,255)";
+                tabButton.m_textColor = "rgb(0,0,0)";
+                tabPage.m_backColor = "rgb(255,255,255)";
+                tabPage.m_borderColor = "rgb(100,100,100)";
+	        }
+        }
+    }
+    initTab();
+    updateTabLayout(m_tabView);
+    
+    //创建买卖档
+    var m_priceList = new FCGrid();
+        m_priceList.m_paint = m_paintApp;
+    if (m_priceList.m_paint.m_defaultUIStyle == "dark") {
+        m_priceList.m_backColor = "rgb(0,0,0)";
+        m_priceList.m_borderColor = null;
+        m_priceList.m_textColor = "rgb(255,255,255)";
+    } else if (m_priceList.m_paint.m_defaultUIStyle == "light") {
+        m_priceList.m_backColor = "rgb(255,255,255)";
+        m_priceList.m_borderColor = null;
+        m_priceList.m_textColor = "rgb(0,0,0)";
+	}
+    m_priceList.m_location = new FCPoint(0, 0);
+    m_priceList.m_size = new FCSize(m_tabView.m_tabPages[0].m_size.cx, m_tabView.m_tabPages[0].m_size.cy);
+    m_priceList.m_visible = true;
+    m_priceList.m_type = "price";
+    m_priceList.m_rowHeight = 50;
+    m_priceList.m_headerHeight = 20;
+    m_tabView.m_tabPages[0].m_views = new Array();
+    m_tabView.m_tabPages[0].m_views.push(m_priceList);
+    m_priceList.m_parent = m_tabView.m_tabPages[0];
+    var column1 = new FCGridColumn();
+    column1.m_text = "id";
+    column1.m_frozen = true;
+    column1.m_width = m_priceList.m_size.cx;
+    m_priceList.m_columns.push(column1);
+    if (m_priceList.m_paint.m_defaultUIStyle == "dark") {
+        column1.m_backColor = "rgb(0,0,0)";
+        column1.m_borderColor = "rgb(100,100,100)";
+        column1.m_textColor = "rgb(255,255,255)";
+    } else if (m_priceList.m_paint.m_defaultUIStyle == "light") {
+        column1.m_backColor = "rgb(255,255,255)";
+        column1.m_borderColor = "rgb(150,150,150)";
+        column1.m_textColor = "rgb(0,0,0)";
+	}
+    
+    var m_upColor_Price = "rgb(219,68,83)"; //上涨颜色
+    var m_downColor_Price = "rgb(15,193,118)"; //下跌颜色
+    var m_upColor2_Price = "rgba(219,68,83,0.5)"; //上涨颜色
+    var m_downColor2_Price = "rgba(15,193,118,0.5)"; //下跌颜色
+    var m_textColor_Price = "rgb(255,255,255)"; //下跌颜色
+    var m_maxVolume_Price = 0; //最大成交量
+    
+    var m_allowPaint_Price = false;
+
+    /*
+    * 检查绘图
+    */
+    var checkPricePaint = function(){
+        if(m_allowPaint_Price){
+            m_allowPaint_Price = false;
+            invalidateView(m_priceList, m_paintApp);
+        }
+    };
+    
+    setInterval(checkPricePaint, 300);
+    
+
+    /*
+     * 查询数据
+     */ 
+    var queryPriceData = function () {
+	    var ws = new WebSocket("wss://ws.coincap.io/trades/binance");
+	    ws.onopen = function () {
+	    };
+	    ws.onmessage = function (e) {
+		    var json = eval('(' + e.data + ')');
+		    var key = json.base + "," + json.quote;
+		    var hasData = false;
+		    var rowsSize = m_priceList.m_rows.length;
+		    for (var i = 0; i < rowsSize; i++) {
+			    var thisCell = m_priceList.m_rows[i].m_cells[0];
+			    if(thisCell.m_value == key){
+			        hasData = true;
+			        thisCell.m_data = json;
+			        thisCell.m_update = 1;
+			        break;
+			    }
+			}
+	        if(!hasData){
+	            var row = new FCGridRow;
+			    m_priceList.m_rows.push(row);
+			    var cell = new FCGridCell();
+			    cell.m_value = key;
+			    cell.m_font = "16px Arial";
+			    cell.m_colSpan = 1;
+			    cell.m_rowSpan = 1;
+			    cell.m_data = json;
+			    cell.m_firstPrice = json.price;
+			    cell.m_update = 0;
+			    row.m_cells.push(cell);
+	        }   
+	        if(isPaintVisible(m_priceList)){
+	            m_allowPaint_Price = true;
+	        }
+	    };
+	    ws.onclose = function (e) {
+		    console.log("close");
+	    };
+	    ws.onerror = function (e) {
+		    console.log(error);
+	    };
+    };
+    queryPriceData();
+    
+    //创建表格
+    var m_gridLog = new FCGrid();
+    
+     /*
+    * 创建列
+    * grid:表格
+    */
+    var createGridColumn = function(grid){
+        var gridColumn = new FCGridColumn();
+        if (grid.m_paint.m_defaultUIStyle == "dark") {
+            gridColumn.m_backColor = "rgb(0,0,0)";
+            gridColumn.m_borderColor = "rgb(150,150,150)";
+            gridColumn.m_textColor = "rgb(255,255,255)";
+        } else if (grid.m_paint.m_defaultUIStyle == "light") {
+            gridColumn.m_backColor = "rgb(200,200,200)";
+            gridColumn.m_borderColor = "rgb(100,100,100)";
+            gridColumn.m_textColor = "rgb(0,0,0)";
+	    }
+	    return gridColumn;
+    };
+    
+        /*
+    * 创建列
+    * grid:表格
+    */
+    var createGridCell = function(grid){
+        var gridCell = new FCGridCell();
+        if (grid.m_paint.m_defaultUIStyle == "dark") {
+            gridCell.m_backColor = "rgb(0,0,0)";
+            gridCell.m_borderColor = "rgb(150,150,150)";
+            gridCell.m_textColor = "rgb(255,255,255)";
+        } else if (grid.m_paint.m_defaultUIStyle == "light") {
+            gridCell.m_backColor = "rgb(255,255,255)";
+            gridCell.m_borderColor = "rgb(100,100,100)";
+            gridCell.m_textColor = "rgb(0,0,0)";
+	    }
+	    return gridCell;
+    };
+
+    //初始化表格
+    var initGridLog = function(){
+        m_gridLog.m_paint = m_paintApp;
+         if (m_gridLog.m_paint.m_defaultUIStyle == "dark") {
+            m_gridLog.m_backColor = "rgb(0,0,0)";
+            m_gridLog.m_borderColor = null;
+            m_gridLog.m_textColor = "rgb(255,255,255)";
+        } else if (m_gridLog.m_paint.m_defaultUIStyle == "light") {
+            m_gridLog.m_backColor = "rgb(255,255,255)";
+            m_gridLog.m_borderColor = null;
+            m_gridLog.m_textColor = "rgb(0,0,0)";
+	    }
+        m_gridLog.m_location = new FCPoint(0, 0);
+        m_gridLog.m_size = new FCSize(m_tabView.m_tabPages[4].m_size.cx, m_tabView.m_tabPages[4].m_size.cy);
+        m_gridLog.m_visible = true;
+        m_gridLog.m_type = "gridlog";
+        m_tabView.m_tabPages[4].m_views = new Array();
+        m_tabView.m_tabPages[4].m_views.push(m_gridLog);
+        m_gridLog.m_parent = m_tabView.m_tabPages[4];
+
+        //增加列
+        var columnNo = createGridColumn(m_gridLog);;
+        columnNo.m_text = "no";
+        columnNo.m_width = 70;
+        m_gridLog.m_columns.push(columnNo);
+
+        var column1 = createGridColumn(m_gridLog);;
+        column1.m_text = "exchange";
+        column1.m_width = 70;
+        m_gridLog.m_columns.push(column1);
+
+        var column2 = createGridColumn(m_gridLog);;
+        column2.m_text = "base";
+        column2.m_width = 100;
+        m_gridLog.m_columns.push(column2);
+
+        var column3 = createGridColumn(m_gridLog);;
+        column3.m_text = "quote";
+        column3.m_width = 100;
+        m_gridLog.m_columns.push(column3);
+
+        var column4 = createGridColumn(m_gridLog);;
+        column4.m_text = "direction";
+        column4.m_width = 70;
+        m_gridLog.m_columns.push(column4);
+
+        var column5 = createGridColumn(m_gridLog);;
+        column5.m_text = "price";
+        column5.m_width = 70;
+        m_gridLog.m_columns.push(column5);
+
+        var column6 = createGridColumn(m_gridLog);;
+        column6.m_text = "volume";
+        column6.m_width = 70;
+        m_gridLog.m_columns.push(column6);
+
+        var column7 = createGridColumn(m_gridLog);;
+        column7.m_text = "timestamp";
+        m_gridLog.m_columns.push(column7);
+
+        var column8 = createGridColumn(m_gridLog);;
+        column8.m_text = "priceUsd";
+        m_gridLog.m_columns.push(column8);
+        if(m_isMobile){
+             m_gridLog.m_scrollH = m_gridLog.m_size.cx;
+        }
+    };
+
+    initGridLog();
+    
+    //是否允许绘图
+    var m_allowPaint_GridLog = false;
+
+    /*
+    * 检查绘图
+    */
+    var checkGridLogPaint = function(){
+        if(m_allowPaint_GridLog){
+            if(isPaintVisible(m_gridLog)){
+                invalidateView(m_gridLog, m_paintApp);
+            }
+            m_allowPaint_GridLog = false;
+        }
+    };
+
+    setInterval(checkGridLogPaint, 300);
+
+    /*
+     * 查询数据
+     */ 
+    var queryGridLogData = function () {
+	    var ws = new WebSocket("wss://ws.coincap.io/trades/binance");
+	    ws.onopen = function () {
+	    };
+	    ws.onmessage = function (e) {
+		    var json = eval('(' + e.data + ')');
+		    var contentHeight = getGridContentHeight(m_gridLog);
+		    var lastRowIsVisible = false;
+		    if (m_gridLog.m_rows.length > 0) {
+			    var lastRowPos = (m_gridLog.m_rows.length - 1) * m_gridLog.m_rowHeight;
+			    if (lastRowPos >= m_gridLog.m_scrollV && lastRowPos <= m_gridLog.m_scrollV + (m_gridLog.m_size.cy - m_gridLog.m_rowHeight)) {
+				    lastRowIsVisible = true;
+                }
+		    }
+		    var row = new FCGridRow();
+		    m_gridLog.m_rows.push(row);
+    		
+		    var noCell = createGridCell(m_gridLog);
+		    noCell.m_value = m_gridLog.m_rows.length;
+		    row.m_cells.push(noCell);
+    		
+		    var cell1 = createGridCell(m_gridLog);
+		    cell1.m_value = json.exchange;
+		    row.m_cells.push(cell1);
+
+		    var cell2 = createGridCell(m_gridLog);
+		    cell2.m_value = json.base;
+		    row.m_cells.push(cell2);
+
+		    var cell3 = createGridCell(m_gridLog);
+		    cell3.m_value = json.quote;
+		    row.m_cells.push(cell3);
+
+		    var cell4 = createGridCell(m_gridLog);
+		    cell4.m_value = json.direction;
+		    row.m_cells.push(cell4);
+		    cell4.m_textColor = "rgb(255,0,0)";
+
+		    var cell5 = createGridCell(m_gridLog);
+		    cell5.m_value = json.price;
+		    row.m_cells.push(cell5);
+		    if (json.direction == "buy") {
+			    cell5.m_textColor = "rgb(219,68,83)";
+		    } else
+		    {
+			    cell5.m_textColor = "rgb(15,193,118)";
+		    }
+
+		    var cell6 = createGridCell(m_gridLog);
+		    cell6.m_value = json.volume;
+		    row.m_cells.push(cell6);
+
+		    var cell7 = createGridCell(m_gridLog);
+		    cell7.m_value = json.timestamp;
+		    row.m_cells.push(cell7);
+
+		    var cell8 = createGridCell(m_gridLog);
+		    cell8.m_value = json.priceUsd;
+		    row.m_cells.push(cell8);
+		    if (lastRowIsVisible) {
+			    var oldScrollV = contentHeight - (m_gridLog.m_size.cy - m_gridLog.m_headerHeight);
+			    if (oldScrollV < 0) {
+				    oldScrollV = 0;
+                }
+			    m_gridLog.m_scrollV = oldScrollV;
+            }
+            m_allowPaint_GridLog = true;
+	    };
+	    ws.onclose = function (e) {
+		    console.log("close");
+	    };
+	    ws.onerror = function (e) {
+		    console.log(error);
+	    };
+    };
+    queryGridLogData();
+    
+    //创建树
+    var m_tree = new FCTree();
+    
+    /*
+    * 创建列
+    * tree:树
+    */
+    var createTreeColumn = function(tree){
+        var treeColumn = new FCTreeColumn();
+        if (tree.m_paint.m_defaultUIStyle == "dark") {
+            treeColumn.m_backColor = "rgb(0,0,0)";
+            treeColumn.m_borderColor = "rgb(255,255,255)";
+            treeColumn.m_textColor = "rgb(255,255,255)";
+        } else if (tree.m_paint.m_defaultUIStyle == "light") {
+            treeColumn.m_backColor = "rgb(200,200,200)";
+            treeColumn.m_borderColor = "rgb(0,0,0)";
+            treeColumn.m_textColor = "rgb(0,0,0)";
+	    }
+	    return treeColumn;
+    };
+    
+    /*
+    * 创建列
+    * tree:树
+    */
+    var createTreeNode = function(tree){
+        var treeNode = new FCTreeNode();
+        if (tree.m_paint.m_defaultUIStyle == "dark") {
+            treeNode.m_backColor = "rgb(0,0,0)";
+            treeNode.m_borderColor = "rgb(255,255,255)";
+            treeNode.m_textColor = "rgb(255,255,255)";
+        } else if (tree.m_paint.m_defaultUIStyle == "light") {
+            treeNode.m_backColor = "rgb(255,255,255)";
+            treeNode.m_borderColor = "rgb(0,0,0)";
+            treeNode.m_textColor = "rgb(0,0,0)";
+	    }
+	    return treeNode;
+    };
+
+    /*
+    * 初始化树
+    */
+    var initTree = function(){
+        m_tree.m_paint = m_paintApp;
+        if (m_tree.m_paint.m_defaultUIStyle == "dark") {
+            m_tree.m_backColor = "rgb(0,0,0)";
+            m_tree.m_borderColor = null;
+            m_tree.m_textColor = "rgb(255,255,255)";
+        } else if (m_tree.m_paint.m_defaultUIStyle == "light") {
+            m_tree.m_backColor = "rgb(255,255,255)";
+            m_tree.m_borderColor = null;
+            m_tree.m_textColor = "rgb(0,0,0)";
+	    }
+        m_tree.m_location = new FCPoint(0, 0);
+        m_tree.m_size = new FCSize(m_tabView.m_tabPages[5].m_size.cx, m_tabView.m_tabPages[5].m_size.cy);
+        m_tree.m_visible = true;
+        m_tree.m_showCheckBox = true;
+
+        m_tabView.m_tabPages[5].m_views = new Array();
+        m_tabView.m_tabPages[5].m_views.push(m_tree);
+        m_tree.m_parent = m_tabView.m_tabPages[5];
+        
+
+        var column = createTreeColumn(m_tree);
+        column.m_width = 500;
+        m_tree.m_columns.push(column);
+
+        var rootNode = createTreeNode(m_tree);
+        rootNode.m_value = "证监会行业类";
+        appendTreeNode(m_tree, rootNode, null);
+
+        var node1 = createTreeNode(m_tree);
+        node1.m_value = "农、林、牧、渔业";
+        appendTreeNode(m_tree, node1, rootNode);
+
+        var strs1 = new Array();
+        strs1.push("农业");
+        strs1.push("林业");
+        strs1.push("畜牧业");
+        strs1.push("渔业");
+        strs1.push("农、林、牧、渔服务业");
+        for(var i = 0; i < strs1.length; i++){
+            var subNode1 = createTreeNode(m_tree);
+            subNode1.m_value = strs1[i];
+            appendTreeNode(m_tree, subNode1, node1);
+        }
+
+        var node2 = createTreeNode(m_tree);
+        node2.m_value = "采矿业";
+        appendTreeNode(m_tree, node2, rootNode);
+
+        var strs2 = new Array();
+        strs2.push("煤炭开采和洗选业");
+        strs2.push("石油和天然气开采业");
+        strs2.push("黑色金属矿采选业");
+        strs2.push("有色金属矿采选业");
+        strs2.push("非金属矿采选业");
+        strs2.push("开采辅助活动");
+        for(var i = 0; i < strs2.length; i++){
+            var subNode2 = createTreeNode(m_tree);
+            subNode2.m_value = strs2[i];
+            appendTreeNode(m_tree, subNode2, node2);
+        }
+
+        var node3 = createTreeNode(m_tree);
+        node3.m_value = "制造业";
+        appendTreeNode(m_tree, node3, rootNode);
+
+        var strs3 = new Array();
+        strs3.push("农副食品加工业");
+        strs3.push("食品制造业");
+        strs3.push("酒、饮料和精制茶制造业");
+        strs3.push("纺织业");
+        strs3.push("纺织服装、服饰业");
+        strs3.push("皮革、毛皮、羽毛及其制品和制鞋业");
+        strs3.push("木材加工和木、竹、藤、棕、草制品业");
+        strs3.push("家具制造业");
+        strs3.push("造纸和纸制品业");
+        strs3.push("印刷和记录媒介复制业");
+        strs3.push("文教、工美、体育和娱乐用品制造业");
+        strs3.push("石油加工、炼焦和核燃料加工业");
+        strs3.push("化学原料及化学制品制造业");
+        strs3.push("医药制造业");
+        strs3.push("化学纤维制造业");
+        strs3.push("橡胶和塑料制品业");
+        strs3.push("非金属矿物制品业");
+        strs3.push("黑色金属冶炼和压延加工业");
+        strs3.push("有色金属冶炼和压延加工业");
+        strs3.push("金属制品业");
+        strs3.push("通用设备制造业");
+        strs3.push("专用设备制造业");
+        strs3.push("汽车制造业");
+        strs3.push("铁路、船舶、航空航天和其他运输设备制造业");
+        strs3.push("电气机械和器材制造业");
+        strs3.push("计算机、通信和其他电子设备制造业");
+        strs3.push("仪器仪表制造业");
+        strs3.push("其他制造业");
+        strs3.push("废弃资源综合利用业");
+        for(var i = 0; i < strs3.length; i++){
+            var subNode3 = createTreeNode(m_tree);
+            subNode3.m_value = strs3[i];
+            appendTreeNode(m_tree, subNode3, node3);
+        }
+    };
+
+    initTree();
+    
+    var m_calendar = new FCCalendar();
+    m_calendar.m_borderColor = null;
+    m_calendar.m_textColor = null;
+    m_calendar.m_location = new FCPoint(0, 0);
+    m_calendar.m_size = new FCSize(m_tabView.m_tabPages[3].m_size.cx, m_tabView.m_tabPages[3].m_size.cy);
+    m_calendar.m_visible = true;
+    m_calendar.m_useAnimation = true;
+    m_calendar.m_paint = m_paintApp;
+    m_tabView.m_tabPages[3].m_views = new Array();
+    m_tabView.m_tabPages[3].m_views.push(m_calendar);
+    m_calendar.m_parent = m_tabView.m_tabPages[3];
+    initCalendar(m_calendar);
+    m_calendar.m_selectedDay = getYear(m_calendar.m_years, 2022).m_months.get(10).m_days.get(1);
+    updateCalendar(m_calendar);
+    if (m_calendar.m_paint.m_defaultUIStyle == "dark") {
+        m_calendar.m_backColor = "rgb(0,0,0)";
+        m_calendar.m_headDiv.m_backColor = "rgb(0,0,0)";
+        m_calendar.m_headDiv.m_textColor = "rgb(255,255,255)";
+        var dayButtonsSize = m_calendar.m_dayDiv.m_dayButtons.length;
+		for (var i = 0; i < dayButtonsSize; i++) {
+			var dayButton = m_calendar.m_dayDiv.m_dayButtons[i];
+			var dayButton_am = m_calendar.m_dayDiv.m_dayButtons[i];
+            dayButton.m_textColor2 = "rgb(200,200,200)";
+            dayButton.m_textColor = "rgb(255,255,255)";
+            dayButton.m_borderColor = "rgb(100,100,100)";
+            dayButton_am.m_textColor2 = "rgb(200,200,200)";
+            dayButton_am.m_textColor = "rgb(255,255,255)";
+            dayButton_am.m_borderColor = "rgb(100,100,100)";
+		}
+		var monthButtonsSize = m_calendar.m_monthDiv.m_monthButtons.length;
+		for (var i = 0; i < monthButtonsSize; i++) {
+			var monthButton = m_calendar.m_monthDiv.m_monthButtons[i];
+			var monthButton_am = m_calendar.m_monthDiv.m_monthButtons[i];
+            monthButton.m_textColor = "rgb(255,255,255)";
+            monthButton.m_borderColor = "rgb(100,100,100)";
+            monthButton_am.m_textColor = "rgb(255,255,255)";
+            monthButton_am.m_borderColor = "rgb(100,100,100)";
+		}
+		var yearButtonsSize = m_calendar.m_yearDiv.m_yearButtons.length;
+		for (var i = 0; i < yearButtonsSize; i++) {
+			var yearButton = m_calendar.m_yearDiv.m_yearButtons[i];
+			var yearButton_am = m_calendar.m_yearDiv.m_yearButtons[i];
+			yearButton.m_textColor = "rgb(255,255,255)";
+            yearButton.m_borderColor = "rgb(100,100,100)";
+            yearButton.m_textColor = "rgb(255,255,255)";
+            yearButton.m_borderColor = "rgb(100,100,100)";
+		}
+    } else if (m_calendar.m_paint.m_defaultUIStyle == "light") {
+        m_calendar.m_backColor = "rgb(255,255,255)";
+        m_calendar.m_headDiv.m_backColor = "rgb(255,255,255)";
+        m_calendar.m_headDiv.m_textColor = "rgb(0,0,0)";
+        var dayButtonsSize = m_calendar.m_dayDiv.m_dayButtons.length;
+		for (var i = 0; i < dayButtonsSize; i++) {
+			var dayButton = m_calendar.m_dayDiv.m_dayButtons[i];
+			var dayButton_am = m_calendar.m_dayDiv.m_dayButtons[i];
+            dayButton.m_textColor2 = "rgb(50,50,50)";
+            dayButton.m_textColor = "rgb(0,0,0)";
+            dayButton.m_borderColor = "rgb(150,150,150)";
+            dayButton_am.m_textColor2 = "rgb(50,50,50)";
+            dayButton_am.m_textColor = "rgb(0,0,0)";
+            dayButton_am.m_borderColor = "rgb(150,150,150)";
+		}
+		var monthButtonsSize = m_calendar.m_monthDiv.m_monthButtons.length;
+		for (var i = 0; i < monthButtonsSize; i++) {
+			var monthButton = m_calendar.m_monthDiv.m_monthButtons[i];
+			var monthButton_am = m_calendar.m_monthDiv.m_monthButtons[i];
+            monthButton.m_textColor = "rgb(0,0,0)";
+            monthButton.m_borderColor = "rgb(150,150,150)";
+            monthButton_am.m_textColor = "rgb(0,0,0)";
+            monthButton_am.m_borderColor = "rgb(150,150,150)";
+		}
+		var yearButtonsSize = m_calendar.m_yearDiv.m_yearButtons.length;
+		for (var i = 0; i < yearButtonsSize; i++) {
+			var yearButton = m_calendar.m_yearDiv.m_yearButtons[i];
+			var yearButton_am = m_calendar.m_yearDiv.m_yearButtons[i];
+			yearButton.m_textColor = "rgb(0,0,0)";
+            yearButton.m_borderColor = "rgb(150,150,150)";
+            yearButton_am.m_textColor = "rgb(0,0,0)";
+            yearButton_am.m_borderColor = "rgb(150,150,150)";
+		}
+	}
+    
+    
+    var m_jsonData = null;
+
+    //绘制示例数据
+    var drawDemoKLine = function(paint, bounds, font, diff, number, inThis){
+        if(m_jsonData){
+	        var maxValue = 0, minValue = 0, startValue = 0, endValue = 0;
+	        for (var i = m_jsonData.data.length - diff - number; i < m_jsonData.data.length - diff; i++) {
+	            var data = m_jsonData.data[i];
+	            if(i == m_jsonData.data.length - diff - number){
+	                maxValue = data.high;
+	                minValue = data.low;
+	                startValue = data.open;
+	            }else{
+	                if(maxValue < data.high){
+	                    maxValue = data.high;
+	                }
+	                if(minValue > data.low){
+	                    minValue = data.low;
+	                }
+	            }
+	        }
+	        endValue = m_jsonData.data[m_jsonData.data.length - diff - 1].close;
+	        if(maxValue > 0){
+	            var lastX = bounds.left + 5;
+	            var percentWidth = (bounds.right - bounds.left - 10) / number;
+	            for (var i = m_jsonData.data.length - diff - number; i < m_jsonData.data.length - diff; i++) {
+	                var data = m_jsonData.data[i];
+	                var closeY = bounds.bottom - 20 - (data.close - minValue) / (maxValue - minValue) * (bounds.bottom - bounds.top - 40);
+	                var openY = bounds.bottom - 20 - (data.open - minValue) / (maxValue - minValue) * (bounds.bottom - bounds.top - 40);
+	                var highY = bounds.bottom - 20 - (data.high - minValue) / (maxValue - minValue) * (bounds.bottom - bounds.top - 40);
+	                var lowY = bounds.bottom - 20 - (data.low - minValue) / (maxValue - minValue) * (bounds.bottom - bounds.top - 40);
+	                var dWidth = parseInt(percentWidth / 2) - 1;
+	                if(dWidth < 1){
+	                    dWidth = 1;
+	                }
+	                if (inThis) {
+	                    if(data.close >= data.open){   
+	                        paint.drawLine("rgb(219,68,83)", 1, 0, lastX, highY, lastX, lowY);
+	                        paint.fillRect("rgb(219,68,83)", lastX - dWidth, closeY, lastX + dWidth, openY);
+	                    }else{
+	                        paint.drawLine("rgb(15,193,118)", 1, 0, lastX, highY, lastX, lowY);
+	                        paint.fillRect("rgb(15,193,118)", lastX - dWidth, openY, lastX + dWidth, closeY);
+	                    }
+	                }else{
+	                     if(data.close >= data.open){   
+	                        paint.drawLine("rgba(219,68,83,0.3)", 1, 0, lastX, highY, lastX, lowY);
+	                        paint.fillRect("rgba(219,68,83,0.3)", lastX - dWidth, closeY, lastX + dWidth, openY);
+	                    }else{
+	                        paint.drawLine("rgba(15,193,118,0.3)", 1, 0, lastX, highY, lastX, lowY);
+	                        paint.fillRect("rgba(15,193,118,0.3)", lastX - dWidth, openY, lastX + dWidth, closeY);
+	                    }
+	                }
+	                lastX += percentWidth;
+	            }
+
+	            var diffRange = (endValue - startValue) / startValue * 100;
+	            var diffRangeStr = diffRange.toFixed(2) + "%";
+	            var dSize = paint.textSize(diffRangeStr, font);
+	            paint.drawLine("rgb(200,200,200)", 1, [3,3], bounds.left + 2, bounds.bottom - dSize.cy * 2 - 5, bounds.right - 2, bounds.bottom - dSize.cy * 2 - 5);
+	            if(diffRange >= 0){
+	                if (inThis) {
+	                    paint.drawText(diffRangeStr, "rgb(219,68,83)", font, bounds.left + (bounds.right - bounds.left - dSize.cx) / 2, bounds.bottom - dSize.cy - 2);
+	                }else{
+	                    paint.drawText(diffRangeStr, "rgba(219,68,83,0.3)", font, bounds.left + (bounds.right - bounds.left - dSize.cx) / 2, bounds.bottom - dSize.cy - 2);
+	                }
+	            }else{
+	                if (inThis) {
+	                    paint.drawText(diffRangeStr, "rgb(15,193,118)", font, bounds.left + (bounds.right - bounds.left - dSize.cx) / 2, bounds.bottom - dSize.cy - 2);
+	                }else{
+	                    paint.drawText(diffRangeStr, "rgba(15,193,118,0.3)", font, bounds.left + (bounds.right - bounds.left - dSize.cx) / 2, bounds.bottom - dSize.cy - 2);
+	                }
+	            }
+	        }
+	    }
+    };
+
+    /*
+    * 绘制日的按钮
+    * dayButton:日期按钮
+    * paint:绘图对象
+    */
+    m_paintApp.onPaintCalendarDayButton = function (dayButton, paint) {
+	    if (dayButton.m_day) {
+		    var calendar = dayButton.m_calendar;
+		    var bounds = dayButton.m_bounds;
+		    var text = dayButton.m_day.m_day;
+		    var tSize = paint.textSize(text, dayButton.m_font);
+		    if(dayButton.m_backColor){
+		        paint.fillRect(dayButton.m_backColor, bounds.left + 2, bounds.top + 2, bounds.right - 2, bounds.bottom - 2);
+		    }
+		    if (dayButton.m_inThisMonth) {
+		        paint.drawText(text, dayButton.m_textColor, dayButton.m_font, bounds.left + 5, bounds.top + 7 + tSize.cy / 2);
+	        } else {
+		        paint.drawText(text, dayButton.m_textColor2, dayButton.m_font, bounds.left + 5, bounds.top + 7 + tSize.cy / 2);
+	        }
+		    drawDemoKLine(paint, bounds, dayButton.m_font, dayButton.m_day.m_day * 20, 20, dayButton.m_inThisMonth);
+		    if(dayButton.m_borderColor){
+	            paint.drawRect(dayButton.m_borderColor, 1, 0, bounds.left + 2, bounds.top + 2, bounds.right - 2, bounds.bottom - 2);
+	        }
+	    }
+    };
+
+    /*
+    * 绘制月的按钮
+    * monthButton:月按钮
+    * paint:绘图对象
+    */
+    m_paintApp.onPaintCalendarMonthButton = function (monthButton, paint) {
+	    var calendar = monthButton.m_calendar;
+	    var bounds = monthButton.m_bounds;
+	    var text = getMonthStr(monthButton.m_month);
+	    var tSize = paint.textSize(text, monthButton.m_font);
+	    if(monthButton.m_backColor){
+	        paint.fillRect(monthButton.m_backColor, bounds.left + 2, bounds.top + 2, bounds.right - 2, bounds.bottom - 2);
+	    }
+	    paint.drawText(text, monthButton.m_textColor, monthButton.m_font, bounds.left + 5, bounds.top + 7 + tSize.cy / 2);
+	    drawDemoKLine(paint, bounds, monthButton.m_font, monthButton.m_month * 40, 30, true);
+	    if(monthButton.m_borderColor){
+	        paint.drawRect(monthButton.m_borderColor, 1, 0, bounds.left + 2, bounds.top + 2, bounds.right - 2, bounds.bottom - 2);
+	    }
+    };
+
+    /*
+    * 绘制年的按钮
+    * yearButton:年按钮
+    * paint:绘图对象
+    */
+    m_paintApp.onPaintCalendarYearButton = function (yearButton, paint) {
+	    var calendar = yearButton.m_calendar;
+	    var bounds = yearButton.m_bounds;
+	    var text = yearButton.m_year;
+	    var tSize = paint.textSize(text, yearButton.m_font);
+	    if(yearButton.m_backColor){
+	        paint.fillRect(yearButton.m_backColor, bounds.left + 2, bounds.top + 2, bounds.right - 2, bounds.bottom - 2);
+	    }
+	    paint.drawText(text, yearButton.m_textColor, yearButton.m_font, bounds.left + 5, bounds.top + 7 + tSize.cy / 2);
+	    drawDemoKLine(paint, bounds, yearButton.m_font, parseInt(Math.random() * 600), 30, true);
+	    if(yearButton.m_borderColor){
+	        paint.drawRect(yearButton.m_borderColor, 1, 0, bounds.left + 2, bounds.top + 2, bounds.right - 2, bounds.bottom - 2);
+	    }
+    };
+    
+    /*
+    * 日历的滚动秒表
+    */
+    var checkCalendar = function () {
+	    calendarTimer(m_calendar);
+    };
+
+    setInterval(checkCalendar, 50);
+
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.open("GET", "https://api.coincap.io/v2/candles?exchange=binance&interval=d1&baseId=bitcoin&quoteId=tether", true);
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {	
+            var result = xmlhttp.responseText;
+            m_jsonData = eval('(' + result + ')');
+            invalidateView(m_calendar, m_paintApp);
+        }
+    }
+    xmlhttp.send(null);
+    
+    /*
+     * 单元格
+     */
+    function FCBidSellCellEx() {
+	    this.m_price = 0; //价格
+	    this.m_direction = "buy"; //方向
+	    this.m_vol = 0; //数量
+    };
+
+    FCBidSellCellEx.prototype = FCGridCell;
+    
+    var m_upColor_BidSell = "rgb(219,68,83)"; //上涨颜色
+    var m_downColor_BidSell = "rgb(15,193,118)"; //下跌颜色
+    var m_upColor2_BidSell = "rgba(219,68,83,0.5)"; //上涨颜色
+    var m_downColor2_BidSell = "rgba(15,193,118,0.5)"; //下跌颜色
+    var m_textColor_BidSell = "rgb(255,255,255)"; //下跌颜色
+    var m_maxVolume_BidSell = 0; //最大成交量
+
+    //创建买卖档
+    var m_bidSell = new FCGrid();
+    m_bidSell.m_paint = m_paintApp;
+    if (m_bidSell.m_paint.m_defaultUIStyle == "dark") {
+        m_bidSell.m_backColor = "rgb(0,0,0)";
+        m_bidSell.m_borderColor = "rgb(100,100,100)";
+        m_bidSell.m_textColor = "rgb(255,255,255)";
+    } else if (m_bidSell.m_paint.m_defaultUIStyle == "light") {
+        m_bidSell.m_backColor = "rgb(255,255,255)";
+        m_bidSell.m_borderColor = "rgb(150,150,150)";
+        m_bidSell.m_textColor = "rgb(0,0,0)";
+        m_textColor_BidSell = "rgb(0,0,0)";
+	}
+    m_bidSell.m_location = new FCPoint(0, 0);
+    m_bidSell.m_size = new FCSize(m_tabView.m_tabPages[2].m_size.cx, m_tabView.m_tabPages[2].m_size.cy);
+    m_bidSell.m_visible = true;
+    m_bidSell.m_headerHeight = 0;
+
+    m_tabView.m_tabPages[2].m_views = new Array();
+    m_tabView.m_tabPages[2].m_views.push(m_bidSell);
+    m_bidSell.m_parent = m_tabView.m_tabPages[2];
+    m_bidSell.m_type = "bidsell";
+    var column1 = new FCGridColumn();
+    column1.m_text = "id";
+    column1.m_frozen = true;
+    column1.m_width = m_bidSell.m_size.cx;
+    m_bidSell.m_columns.push(column1);
+
+    /*
+    * 绘制单元格
+    * grid:表格
+    * row:行
+    * column:列
+    * cell:单元格
+    * paint:绘图对象
+    * left:左侧坐标
+    * top:上方坐标
+    * right:右侧坐标
+    * bottom:下方坐标
+    */
+    var drawCell = function (grid, row, column, cell, paint, left, top, right, bottom) {
+	    if (m_maxVolume_BidSell > 0) {
+		    var volMaxWidth = right - left - 10;
+		    var thisWidth = cell.m_vol / m_maxVolume_BidSell * volMaxWidth;
+		    if (cell.m_direction == "buy") {
+			    paint.fillRect(m_upColor2_BidSell, right - 10 - thisWidth, top + 1, right - 10, bottom - 1);
+			    paint.drawText(cell.m_price, m_upColor_BidSell, cell.m_font, 10, top + (bottom - top) / 2);
+		    } else if (cell.m_direction == "sell") {
+			    paint.fillRect(m_downColor2_BidSell, right - 10 - thisWidth, top + 1, right - 10, bottom - 1);
+			    paint.drawText(cell.m_price, m_downColor_BidSell, cell.m_font, 10, top + (bottom - top) / 2);
+		    }
+		    var volText = cell.m_vol.toFixed(5);
+		    var volSize = paint.textSize(volText, cell.m_font);
+		    paint.drawText(volText, m_textColor_BidSell, cell.m_font, right - volSize.cx - 20, top + (bottom - top) / 2);
+        }
+    };
+
+        //是否允许重绘
+    var m_allowPaint_BidSell = false;
+
+    //检查绘图
+    var checkBidSellPaint = function(){
+        if(m_allowPaint_BidSell){
+			invalidateView(m_bidSell, m_paintApp);
+            m_allowPaint_BidSell = false;
+        }
+    };
+
+    setInterval(checkBidSellPaint, 300);
+
+    /*
+     * 查询数据
+     */ 
+    var queryBidSellData = function () {
+	    var ws = new WebSocket("wss://ws.coincap.io/trades/binance");
+	    ws.onopen = function () {
+	    };
+	    ws.onmessage = function (e) {
+		    var json = eval('(' + e.data + ')');
+		    if (json.base == "bitcoin" && json.quote == "tether") {
+			    var hasData = false;
+			    m_maxVolume_BidSell = 0;
+			    var rowsSize = m_bidSell.m_rows.length;
+			    for (var i = 0; i < rowsSize; i++) {
+				    var thisCell = m_bidSell.m_rows[i].m_cells[0];
+				    if (thisCell.m_price == parseFloat(json.price.toFixed(1))) {
+					    hasData = true;
+					    if (thisCell.m_direction == json.direction) {
+						    thisCell.m_vol = thisCell.m_vol + json.volume;
+						    if (m_maxVolume_BidSell < thisCell.m_vol) {
+							    m_maxVolume_BidSell = thisCell.m_vol;
+						    }
+					    } else {
+						    var newVol = thisCell.m_vol - json.volume;
+						    if (newVol > 0) {
+							    thisCell.m_vol = newVol;
+							    if (m_maxVolume_BidSell < thisCell.m_vol) {
+								    m_maxVolume_BidSell = thisCell.m_vol;
+							    }
+						    } else {
+							    m_bidSell.m_rows.splice(i, 1);
+							    break;
+						    }
+					    }
+				    } else {
+					    if (m_maxVolume_BidSell < thisCell.m_vol) {
+						    m_maxVolume_BidSell = thisCell.m_vol;
+					    }
+                    }
+			    }
+			    if (!hasData) {
+				    var row = new FCGridRow;
+				    m_bidSell.m_rows.push(row);
+				    var cell = new FCBidSellCellEx;
+				    cell.m_direction = json.direction;
+				    cell.m_price = parseFloat(json.price.toFixed(1));
+				    cell.m_vol = json.volume;
+				    cell.m_font = "16px Arial";
+				    cell.m_colSpan = 1;
+				    cell.m_rowSpan = 1;
+				    row.m_cells.push(cell);
+				    if (m_maxVolume_BidSell < cell.m_vol) {
+					    m_maxVolume_BidSell = cell.m_vol;
+				    }
+			    }
+			    m_bidSell.m_rows.sort((m, n) => {
+				    if (m.m_cells[0].m_direction == "sell" && n.m_cells[0].m_direction == "buy") {
+					    return -1;
+				    }
+				    if (m.m_cells[0].m_direction == "buy" && n.m_cells[0].m_direction == "sell") {
+					    return 1;
+				    }
+				    if (m.m_cells[0].m_price > n.m_cells[0].m_price) {
+					    return -1;
+				    }
+				    else if (m.m_cells[0].m_price < n.m_cells[0].m_price) {
+					    return 1;
+				    }
+				    else return 0;
+			    });
+			    if(isPaintVisible(m_bidSell)){
+			        m_allowPaint_BidSell = true;
+			    }
+		    }
+	    };
+	    ws.onclose = function (e) {
+		    console.log("close");
+	    };
+	    ws.onerror = function (e) {
+		    console.log(error);
+	    };
+    };
+
+    queryBidSellData();
+    
+    var m_showDemoTool_Chart = false; //是否显示Demo工具
+
+    //K线视图
+    var m_chart = new FCChart(); 
+    m_chart.m_paint = m_paintApp;
+    m_chart.m_location = new FCPoint(0, 0);
+    if(m_showDemoTool_Chart){
+         m_chart.m_size = new FCSize(m_tabView.m_tabPages[1].m_size.cx, m_tabView.m_tabPages[1].m_size.cy - 120);
+    }else{
+         m_chart.m_size = new FCSize(m_tabView.m_tabPages[1].m_size.cx, m_tabView.m_tabPages[1].m_size.cy);
+    }
+    m_chart.m_visible = true;
+    m_chart.m_rightVScaleWidth = 70;
+    if(m_isMobile){
+        m_chart.m_rightVScaleWidth = 0;
+    }
+    m_chart.m_leftVScaleWidth = 70;
+    m_chart.m_vScaleDistance = 35;
+    m_chart.m_hScalePixel = 11;
+    m_chart.m_hScaleHeight = 35;
+    m_chart.m_candlePaddingTop = 30;
+    m_chart.m_candlePaddingBottom = 20;
+    m_chart.m_volPaddingTop = 20;
+    m_chart.m_volPaddingBottom = 0;
+    m_chart.m_indPaddingTop = 20;
+    m_chart.m_indPaddingBottom = 20;
+    m_chart.m_vScaleDistance = 35;
+    m_chart.m_font = "12px Arial";
+    m_tabView.m_tabPages[1].m_views = new Array();
+    m_tabView.m_tabPages[1].m_views.push(m_chart);
+    m_chart.m_parent = m_tabView.m_tabPages[1];
+
+    var m_addingPlot_Chart = ""; //正要添加的画线
+    if(m_showDemoTool_Chart){
+        //指标集合
+        var indicators = new Array();
+        indicators.push("MA");
+        indicators.push("BOLL");
+        indicators.push("MACD");
+        indicators.push("KDJ");
+        indicators.push("BIAS");
+        indicators.push("BBI");
+        indicators.push("RSI");
+        indicators.push("ROC");
+        indicators.push("WR");
+        indicators.push("DMA");
+        indicators.push("TRIX");
+        indicators.push("CCI");
+        var iLeft = 0;
+        for(var i = 0; i < indicators.length; i++){
+            var button = new FCView;
+            button.m_backColor = "rgb(255,255,255)";
+            button.m_textColor = "rgb(0,0,0)";
+            button.m_borderColor = "rgb(0,0,0)";
+            button.m_location = new FCPoint(iLeft, m_tabView.m_tabPages[1].m_size.cy - 120);
+            button.m_size = new FCSize(79, 29);
+            button.m_visible = true;
+            button.m_text = indicators[i];
+            button.m_font = "12px Arial";
+            button.m_name = "Indicator";
+            m_tabView.m_tabPages[1].m_views.push(button);
+            button.m_parent = m_tabView.m_tabPages[1];
+            iLeft += 80;
+        }
+
+        //画线集合
+        var plots = new Array();
+        iLeft = 0;
+        plots.push("Line");
+        plots.push("Segment");
+        plots.push("Ray");
+        plots.push("Triangle");
+        plots.push("Rect");
+        plots.push("Cycle");
+        plots.push("CircumCycle");
+        plots.push("Ellipse");
+        plots.push("AngleLine");
+        plots.push("LRLine");
+        plots.push("LRChannel");
+        plots.push("SymmetricTriangle");
+        var plotNames = new Array();
+        plotNames.push("直线");
+        plotNames.push("线段");
+        plotNames.push("射线");
+        plotNames.push("三角形");
+        plotNames.push("矩形");
+        plotNames.push("圆");
+        plotNames.push("外接圆");
+        plotNames.push("椭圆");
+        plotNames.push("角度线");
+        plotNames.push("线性回归");
+        plotNames.push("线性回归通道");
+        plotNames.push("对称三角形");
+        for(var i = 0; i < plots.length; i++){
+            var button = new FCView;
+            button.m_backColor = "rgb(255,255,255)";
+            button.m_textColor = "rgb(0,0,0)";
+            button.m_borderColor = "rgb(0,0,0)";
+            button.m_location = new FCPoint(iLeft, m_tabView.m_tabPages[1].m_size.cy - 90);
+            button.m_size = new FCSize(79, 29);
+            button.m_visible = true;
+            button.m_text = plotNames[i];
+            button.m_tag = plots[i];
+            button.m_font = "12px Arial";
+            button.m_name = "Plot";
+            m_tabView.m_tabPages[1].m_views.push(button);
+            button.m_parent = m_tabView.m_tabPages[1];
+            iLeft += 80;
+        }
+
+        var plots2 = new Array();
+        iLeft = 0;
+        plots2.push("LRBand");
+        plots2.push("ParalleGram");
+        plots2.push("SpeedResist");
+        plots2.push("FiboFanline");
+        plots2.push("FiboTimezone");
+        plots2.push("Percent");
+        plots2.push("BoxLine");
+        plots2.push("TironeLevels");
+        plots2.push("QuadrantLines");
+        plots2.push("Parallel");
+        plots2.push("GoldenRatio");
+        plots2.push("ArrowSegment");
+        var plotNames2 = new Array();
+        plotNames2.push("线性回归带");
+        plotNames2.push("平行四边形");
+        plotNames2.push("速阻线");
+        plotNames2.push("斐波扇面");
+        plotNames2.push("斐波周期线");
+        plotNames2.push("百分比线");
+        plotNames2.push("箱型线");
+        plotNames2.push("泰龙水平线");
+        plotNames2.push("四等分线");
+        plotNames2.push("平行线");
+        plotNames2.push("黄金分割线");
+        plotNames2.push("箭头线段");
+        for(var i = 0; i < plots2.length; i++){
+            var button = new FCView;
+            button.m_backColor = "rgb(255,255,255)";
+            button.m_textColor = "rgb(0,0,0)";
+            button.m_borderColor = "rgb(0,0,0)";
+            button.m_location = new FCPoint(iLeft, m_tabView.m_tabPages[1].m_size.cy - 60);
+            button.m_size = new FCSize(79, 29);
+            button.m_visible = true;
+            button.m_text = plotNames2[i];
+            button.m_tag = plots2[i];
+            button.m_font = "12px Arial";
+            button.m_name = "Plot";
+            m_tabView.m_tabPages[1].m_views.push(button);
+            button.m_parent = m_tabView.m_tabPages[1];
+            iLeft += 80;
+        }
+
+        iLeft = 0;
+        var functions = new Array();
+        functions.push("白色");
+        functions.push("黑色");
+        functions.push("标准坐标");
+        functions.push("对数坐标");
+        functions.push("清除画线");
+        functions.push("切换到最近");
+        functions.push("分时线");
+        functions.push("1分钟线");
+        functions.push("日线");
+        functions.push("秒线");
+        functions.push("TICK图");
+        for(var i = 0; i < functions.length; i++){
+            var button = new FCView;
+            button.m_backColor = "rgb(255,255,255)";
+            button.m_textColor = "rgb(0,0,0)";
+            button.m_borderColor = "rgb(0,0,0)";
+            button.m_location = new FCPoint(iLeft, m_tabView.m_tabPages[1].m_size.cy - 30);
+            button.m_size = new FCSize(79, 29);
+            button.m_visible = true;
+            button.m_text = functions[i];
+            button.m_font = "12px Arial";
+            button.m_name = "Function";
+            m_tabView.m_tabPages[1].m_views.push(button);
+            button.m_parent = m_tabView.m_tabPages[1];
+            iLeft += 80;
+        }
+    }
+
+    /*
+    * 黑色风格
+    */
+    var toBlack_Chart = function(){
+        m_chart.m_paint.m_defaultUIStyle = "dark";
+        m_chart.m_backColor = "rgb(0,0,0)";
+        m_chart.m_borderColor = null;
+        m_chart.m_textColor = "rgb(255,255,255)";
+        m_chart.m_scaleColor = "rgb(100,100,100)"; 
+        m_chart.m_crossTipColor = "rgb(50,50,50)"; 
+        m_chart.m_crossLineColor = "rgb(100,100,100)"; 
+        m_chart.m_gridColor = "rgba(100,100,100,0.5)"; 
+        m_indicatorColors = new Array();
+        m_indicatorColors.push("rgb(255,255,255)");
+        m_indicatorColors.push("rgb(255,255,0)");
+        m_indicatorColors.push("rgb(255,0,255)");
+        m_indicatorColors.push("rgb(255,0,0)");
+        m_indicatorColors.push("rgb(0,255,255)");
+        m_indicatorColors.push("rgb(0,255,0)");
+        m_indicatorColors.push("rgb(255,255,0)");
+        m_indicatorColors.push("rgb(255,255,255)");
+        for(var i = 0; i < m_chart.m_plots.length; i++){
+            var plot = m_chart.m_plots[i];
+            plot.m_lineColor = "rgb(255,255,255)";
+            plot.m_pointColor = "rgba(255,255,255,0.5)";
+        }
+    };
+
+    /*
+    * 白色风格
+    */
+    var toWhite_Chart = function(){
+        m_chart.m_paint.m_defaultUIStyle = "light";
+        m_chart.m_backColor = "rgb(255,255,255)";
+        m_chart.m_borderColor = "rgb(0,0,0)";
+        m_chart.m_textColor = "rgb(0,0,0)";
+        m_chart.m_scaleColor = "rgb(0,0,0)"; 
+        m_chart.m_crossTipColor = "rgb(220,220,220)"; 
+        m_chart.m_crossLineColor = "rgb(100,100,100)"; 
+        m_chart.m_gridColor = "rgba(0,0,0,0.5)"; 
+        m_indicatorColors = new Array();
+        m_indicatorColors.push("rgb(100,100,100)");
+        m_indicatorColors.push("rgb(206,147,27)");
+        m_indicatorColors.push("rgb(150,0,150)");
+        m_indicatorColors.push("rgb(255,0,0)");
+        m_indicatorColors.push("rgb(0,150,150)");
+        m_indicatorColors.push("rgb(0,150,0)");
+        m_indicatorColors.push("rgb(59,174,218)");
+        m_indicatorColors.push("rgb(50,50,50)");
+        for(var i = 0; i < m_chart.m_plots.length; i++){
+            var plot = m_chart.m_plots[i];
+            plot.m_lineColor = "rgb(0,0,0)";
+            plot.m_pointColor = "rgba(0,0,0,0.5)";
+        }
+    };
+    
+    if(m_chart.m_paint.m_defaultUIStyle == "dark"){
+        toBlack_Chart();
+    }else if(m_chart.m_paint.m_defaultUIStyle == "light"){
+        toWhite_Chart();
+    }
+    
+    //已请求次数
+    var m_requareTimes_Chart = 0;
+    //最新数据的日期
+    var m_lastDate_Chart = "";
+
+    /*
+     * 查询历史数据
+     */ 
+    var queryHistoryData = function() {
+	    var result;
+        if (m_requareTimes_Chart == 0) {
+            if(m_chart.m_cycle != "second" && m_chart.m_cycle != "tick"){
+                m_chart.m_plots = new Array();
+                var url = "https://api.coincap.io/v2/candles?exchange=binance&interval=m1&baseId=bitcoin&quoteId=tether";
+                if (m_chart.m_cycle == "day") {
+                    url = "https://api.coincap.io/v2/candles?exchange=binance&interval=d1&baseId=bitcoin&quoteId=tether";
+                }
+                var xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("GET", url, true);
+                xmlhttp.onreadystatechange = function () {
+                    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {	
+                    m_chart.m_crossStopIndex = -1;
+                    m_chart.m_plots = new Array();
+                    m_chart.m_sPlot = null;
+                    m_chart.m_selectShape = ""; 
+                    m_chart.m_selectShapeEx = ""; 
+	                if (m_chart.m_cycle == "trend") {
+	                    m_chart.m_autoFillHScale = true;
+	                }else{
+            	        m_chart.m_autoFillHScale = false;
+	                }
+                    m_chart.m_hScalePixel = 11;
+                        var result = xmlhttp.responseText;
+                        var json = eval('(' + result + ')');
+                        var dataList = new Array();
+                        for (var i = 0; i < json.data.length; i++) {
+                            var data = new SecurityData();
+                            data.m_close = parseFloat(json.data[i].close);
+                            data.m_high = parseFloat(json.data[i].high);
+                            data.m_low = parseFloat(json.data[i].low);
+                            data.m_open = parseFloat(json.data[i].open);
+                            data.m_volume = parseFloat(json.data[i].volume);
+                            data.m_date = parseInt(json.data[i].period);
+                            dataList.push(data);
+                            m_lastDate_Chart = json.data[i].period;
+                        }
+                        m_chart.m_data = dataList;
+                        if (m_chart.m_cycle == "trend") {
+                            var dataListNew = new Array();
+                            var startIndex = dataList.length - 240;
+                            if (startIndex < 0) {
+                                startIndex = 0;
+                            }
+                            for (var i = startIndex; i < dataList.length; i++) {
+                                dataListNew.push(m_chart.m_data[i]);
+                            }
+                            m_chart.m_data = dataListNew;
+                        }
+                        var maxVisibleRecord = getChartMaxVisibleCount(m_chart, m_chart.m_hScalePixel, getChartWorkAreaWidth(m_chart));
+                        m_chart.m_lastVisibleIndex = m_chart.m_data.length - 1;
+                        if (maxVisibleRecord > m_chart.m_data.length) {
+                            m_chart.m_firstVisibleIndex = 0;
+                        } else {
+                            m_chart.m_firstVisibleIndex = m_chart.m_lastVisibleIndex - maxVisibleRecord + 1;
+                        }
+                        resetChartVisibleRecord(m_chart);
+                        checkChartLastVisibleIndex(m_chart);
+                        calcChartIndicator(m_chart);
+                        if(isPaintVisible(m_chart)){
+                            invalidateView(m_chart, m_paintApp);
+                        }
+                    } 
+                }
+                xmlhttp.send(null);
+            }
+        } else {
+            if(m_chart.m_cycle != "second" && m_chart.m_cycle != "tick"){
+                var url = "https://api.coincap.io/v2/candles?exchange=binance&interval=m1&baseId=bitcoin&quoteId=tether";
+                if (m_chart.m_cycle == "day") {
+                    url = "https://api.coincap.io/v2/candles?exchange=binance&interval=d1&baseId=bitcoin&quoteId=tether";
+                }
+                var xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("GET", url, true);
+                xmlhttp.onreadystatechange = function () {
+                    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+                        var result = xmlhttp.responseText;
+                        var json = eval('(' + result + ')');
+                        if (json.data.length > 0 && m_chart.m_data.length > 0) {
+                            for (var i = 0; i < json.data.length; i++) {
+                                if (parseFloat(json.data[i].period) >= parseFloat(m_lastDate_Chart)) {
+                                    var data = new SecurityData();
+                                    data.m_close = parseFloat(json.data[i].close);
+                                    data.m_high = parseFloat(json.data[i].high);
+                                    data.m_low = parseFloat(json.data[i].low);
+                                    data.m_open = parseFloat(json.data[i].open);
+                                    data.m_volume = parseFloat(json.data[i].volume);
+                                    data.m_date = parseInt(json.data[i].period);
+                                    if (m_chart.m_data[m_chart.m_data.length - 1].m_date == data.m_date) {
+                                        console.log("update:" + data.m_date);
+                                        m_chart.m_data[m_chart.m_data.length - 1] = data;
+                                    } else {
+                                        console.log("add:" + data.m_date);
+                                        m_chart.m_data.push(data);
+                                    }
+                                    m_lastDate_Chart = json.data[i].period;
+                                }
+                            }
+                            if (m_chart.m_cycle == "trend") {
+                                var dataListNew = new Array();
+                                var startIndex = m_chart.m_data.length - 240;
+                                if (startIndex < 0) {
+                                    startIndex = 0;
+                                }
+                                for (var i = startIndex; i < m_chart.m_data.length; i++) {
+                                    dataListNew.push(m_chart.m_data[i]);
+                                }
+                                m_chart.m_data = dataListNew;
+                            }
+                            resetChartVisibleRecord(m_chart);
+                            checkChartLastVisibleIndex(m_chart);
+                            calcChartIndicator(m_chart);
+                            if(isPaintVisible(m_chart)){
+                                invalidateView(m_chart, m_paintApp);
+                            }
+                        }
+                    }
+                }
+                xmlhttp.send(null); 
+            }   
+	    }
+	    m_requareTimes_Chart++;
+    };
+
+    //queryHistoryData();
+    setInterval(queryHistoryData, 30000);
+
+    //是否允许重绘
+    var m_allowPaint_Chart = false;
+
+    //加载次数
+    var m_loadTick_Chart = false;
+
+    //检查绘图
+    var checkChartPaint = function(){
+        if(m_allowPaint_Chart){
+            if(m_chart.m_data && m_chart.m_data.length > 0){
+                resetChartVisibleRecord(m_chart);
+                checkChartLastVisibleIndex(m_chart);
+                calcChartIndicator(m_chart);
+                if(isPaintVisible(m_chart)){
+                    invalidateView(m_chart, m_paintApp);
+                }
+            }
+            m_allowPaint_Chart = false;
+        }
+    };
+
+    setInterval(checkChartPaint, 300);
+
+    //上个日期
+    var m_lastDate_Chart = 0;
+
+    /*
+     * 查询数据
+     */ 
+    var queryRuntimeData = function () {
+        if(m_loadTick_Chart){
+            return;
+        }
+        m_loadTick_Chart = true;
+	    var ws = new WebSocket("wss://ws.coincap.io/trades/binance");
+	    ws.onopen = function () {
+	    };
+	    ws.onmessage = function (e) {
+	        if(m_chart.m_cycle == "second" || m_chart.m_cycle == "tick"){
+		        var json = eval('(' + e.data + ')');
+		        if (json.base == "bitcoin" && json.quote == "tether") {
+	                var thisDate = parseInt(json.timestamp);
+	                if(m_chart.m_cycle == "second"){
+	                    thisDate = parseInt(thisDate / 1000) * 1000;
+	                }
+	                var lastData = null;
+	                if(m_chart.m_data && m_chart.m_data.length > 0){
+	                    lastData = m_chart.m_data[m_chart.m_data.length - 1];
+	                }else{
+	                    m_chart.m_data = new Array();
+	                }
+	                if(lastData && lastData.m_date >= m_lastDate_Chart){
+	                    if(lastData.m_high < json.price){
+	                        lastData.m_high = json.price;
+	                    }
+	                    if(lastData.m_low > json.price){
+	                        lastData.m_low = json.price;
+	                    }
+	                    lastData.m_close = json.price;
+	                    lastData.m_volume = lastData.m_volume + json.volume;
+	                }else{
+	                    var data = new SecurityData();
+                        data.m_close = parseFloat(json.price);
+                        data.m_high = parseFloat(json.price);
+                        data.m_low = parseFloat(json.price);
+                        data.m_open = parseFloat(json.price);
+                        data.m_volume = parseFloat(json.volume);
+                        data.m_date = thisDate;
+                        m_chart.m_data.push(data);
+	                }
+	                if(m_lastDate_Chart < thisDate){
+	                    m_lastDate_Chart = thisDate;
+	                }
+                    m_allowPaint_Chart = true;
+		        }
+            }
+	    };
+	    ws.onclose = function (e) {
+		    console.log("close");
+	    };
+	    ws.onerror = function (e) {
+		    console.log(error);
+	    };
+    };
+    
+    m_chart.m_cycle = "second";
+    queryRuntimeData();
+    invalidate(m_paintApp);
+</script>
+</body>
+</html>

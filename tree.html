@@ -1,0 +1,451 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat的HTML5框架(开源)</title>
+<style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+</style>
+</head>
+<body>
+    <canvas id="treeCanvas" width="1000" height="700" >
+        Your browser does not support canvas element.
+    </canvas>
+    <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_tree.js" ></script>
+    <script type="text/javascript" src="facecat_div.js" ></script>
+    <script type="text/javascript">
+   var m_canvasTree = document.getElementById("treeCanvas"); //绘图区域
+    var m_contextTree = m_canvasTree.getContext("2d"); //绘图上下文
+    m_canvasTree.width = window.innerWidth;
+    m_canvasTree.height = window.innerHeight;
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasTree.style.width = m_canvasTree.width + 'px';
+        m_canvasTree.style.height = m_canvasTree.height + 'px';
+        m_canvasTree.height = m_canvasTree.height* window.devicePixelRatio;
+        m_canvasTree.width = m_canvasTree.width * window.devicePixelRatio;
+        m_contextTree.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+
+    var m_paintTree = new FCPaint(); //绘图对象
+    m_paintTree.m_canvas = m_canvasTree;
+    m_canvasTree.m_paint = m_paintTree;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintTree.m_scaleFactorX = 2.5;
+        m_paintTree.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSizeTree = new FCSize((m_canvasTree.width / m_ratio / m_paintTree.m_scaleFactorX), (m_canvasTree.height / m_ratio / m_paintTree.m_scaleFactorY));
+    m_paintTree.m_defaultUIStyle = "dark";
+       var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintTree.m_defaultUIStyle = "light";
+    }
+
+    var m_views_Tree = new Array(); //视图集合
+    m_canvasTree.m_views = m_views_Tree;
+    
+    // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchEndTree = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchEndTree <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchEndTree = now;
+    }, {
+        passive: false
+    });
+
+    //创建树
+    var m_tree = new FCTree();
+    
+    /*
+    * 创建列
+    * tree:树
+    */
+    var createTreeColumn = function(tree){
+        var treeColumn = new FCTreeColumn();
+        if (tree.m_paint.m_defaultUIStyle == "dark") {
+            treeColumn.m_backColor = "rgb(0,0,0)";
+            treeColumn.m_borderColor = "rgb(255,255,255)";
+            treeColumn.m_textColor = "rgb(255,255,255)";
+        } else if (tree.m_paint.m_defaultUIStyle == "light") {
+            treeColumn.m_backColor = "rgb(200,200,200)";
+            treeColumn.m_borderColor = "rgb(0,0,0)";
+            treeColumn.m_textColor = "rgb(0,0,0)";
+	    }
+	    return treeColumn;
+    };
+    
+    /*
+    * 创建列
+    * tree:树
+    */
+    var createTreeNode = function(tree){
+        var treeNode = new FCTreeNode();
+        if (tree.m_paint.m_defaultUIStyle == "dark") {
+            treeNode.m_backColor = "rgb(0,0,0)";
+            treeNode.m_borderColor = "rgb(255,255,255)";
+            treeNode.m_textColor = "rgb(255,255,255)";
+        } else if (tree.m_paint.m_defaultUIStyle == "light") {
+            treeNode.m_backColor = "rgb(255,255,255)";
+            treeNode.m_borderColor = "rgb(0,0,0)";
+            treeNode.m_textColor = "rgb(0,0,0)";
+	    }
+	    return treeNode;
+    };
+
+    /*
+    * 初始化树
+    */
+    var initTree = function(){
+       m_tree.m_paint = m_paintTree;
+       if (m_tree.m_paint.m_defaultUIStyle == "dark") {
+            m_tree.m_backColor = "rgb(0,0,0)";
+            m_tree.m_borderColor = "rgb(255,255,255)";
+            m_tree.m_textColor = "rgb(255,255,255)";
+        } else if (m_tree.m_paint.m_defaultUIStyle == "light") {
+            m_tree.m_backColor = "rgb(255,255,255)";
+            m_tree.m_borderColor = "rgb(0,0,0)";
+            m_tree.m_textColor = "rgb(0,0,0)";
+	    }
+        m_tree.m_location = new FCPoint(0, 0);
+        m_tree.m_size = new FCSize(m_canvasSizeTree.cx, m_canvasSizeTree.cy);
+        m_tree.m_visible = true;
+        m_tree.m_showCheckBox = true;
+        m_views_Tree.push(m_tree);
+
+        var column = createTreeColumn(m_tree);
+        column.m_width = 500;
+        m_tree.m_columns.push(column);
+       
+        var rootNode = createTreeNode(m_tree);
+        rootNode.m_value = "证监会行业类";
+        appendTreeNode(m_tree, rootNode, null);
+
+        var node1 = createTreeNode(m_tree);
+        node1.m_value = "农、林、牧、渔业";
+        appendTreeNode(m_tree, node1, rootNode);
+
+        var strs1 = new Array();
+        strs1.push("农业");
+        strs1.push("林业");
+        strs1.push("畜牧业");
+        strs1.push("渔业");
+        strs1.push("农、林、牧、渔服务业");
+        for(var i = 0; i < strs1.length; i++){
+            var subNode1 = createTreeNode(m_tree);
+            subNode1.m_value = strs1[i];
+            appendTreeNode(m_tree, subNode1, node1);
+        }
+
+        var node2 = createTreeNode(m_tree);
+        node2.m_value = "采矿业";
+        appendTreeNode(m_tree, node2, rootNode);
+
+        var strs2 = new Array();
+        strs2.push("煤炭开采和洗选业");
+        strs2.push("石油和天然气开采业");
+        strs2.push("黑色金属矿采选业");
+        strs2.push("有色金属矿采选业");
+        strs2.push("非金属矿采选业");
+        strs2.push("开采辅助活动");
+        for(var i = 0; i < strs2.length; i++){
+            var subNode2 = createTreeNode(m_tree);
+            subNode2.m_value = strs2[i];
+            appendTreeNode(m_tree, subNode2, node2);
+        }
+
+        var node3 = createTreeNode(m_tree);
+        node3.m_value = "制造业";
+        appendTreeNode(m_tree, node3, rootNode);
+
+        var strs3 = new Array();
+        strs3.push("农副食品加工业");
+        strs3.push("食品制造业");
+        strs3.push("酒、饮料和精制茶制造业");
+        strs3.push("纺织业");
+        strs3.push("纺织服装、服饰业");
+        strs3.push("皮革、毛皮、羽毛及其制品和制鞋业");
+        strs3.push("木材加工和木、竹、藤、棕、草制品业");
+        strs3.push("家具制造业");
+        strs3.push("造纸和纸制品业");
+        strs3.push("印刷和记录媒介复制业");
+        strs3.push("文教、工美、体育和娱乐用品制造业");
+        strs3.push("石油加工、炼焦和核燃料加工业");
+        strs3.push("化学原料及化学制品制造业");
+        strs3.push("医药制造业");
+        strs3.push("化学纤维制造业");
+        strs3.push("橡胶和塑料制品业");
+        strs3.push("非金属矿物制品业");
+        strs3.push("黑色金属冶炼和压延加工业");
+        strs3.push("有色金属冶炼和压延加工业");
+        strs3.push("金属制品业");
+        strs3.push("通用设备制造业");
+        strs3.push("专用设备制造业");
+        strs3.push("汽车制造业");
+        strs3.push("铁路、船舶、航空航天和其他运输设备制造业");
+        strs3.push("电气机械和器材制造业");
+        strs3.push("计算机、通信和其他电子设备制造业");
+        strs3.push("仪器仪表制造业");
+        strs3.push("其他制造业");
+        strs3.push("废弃资源综合利用业");
+        for(var i = 0; i < strs3.length; i++){
+            var subNode3 = createTreeNode(m_tree);
+            subNode3.m_value = strs3[i];
+            appendTreeNode(m_tree, subNode3, node3);
+        }
+    };
+
+    initTree();
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_Tree = function(view, mp, buttons, clicks, delta) {
+        
+    };
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseDown_Tree = function(view, mp, buttons, clicks, delta) {
+	    if (view.m_type == "tree") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+		    mouseDownTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_Tree = function (view, mp, buttons, clicks, delta) {
+        if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+	    if (view.m_type == "tree") {
+	        mouseWheelTree(view, delta);
+	        invalidateView(view, m_paintTree);
+	    }
+    };
+
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_Tree = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "tree") {
+		    view.m_allowDragScroll = true;
+		    mouseDownTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_Tree = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "tree") {
+            mouseMoveTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paintTree);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_Tree = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "tree") {
+		    mouseUpTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paintTree);
+	    }
+    };
+    
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_Tree = function (view, mp, buttons, clicks, delta) {
+	    if (view.m_type == "tree") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+		    mouseMoveTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paintTree);
+        }
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseUp_Tree = function (view, mp, buttons, clicks, delta) {
+	    if (view.m_type == "tree") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+		    mouseUpTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paintTree);
+        }
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintTree.onPaint = function (view, paint, clipRect) {
+	    if (view.m_type == "tree") {
+	        drawDiv(view, paint, clipRect);
+		    drawTree(view, paint, clipRect);
+	    }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintTree.onPaintBorder = function (view, paint, clipRect) {
+	    if (view.m_type == "tree"){
+            drawDivBorder(view, paint, clipRect);
+		    drawTreeScrollBar(view, paint, clipRect);
+	    }
+    };
+    
+    /*
+    * 表格的鼠标点击方法
+    * tree: 树
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    m_paintTree.onClickTreeNode = function(tree, node, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+    
+    addMouseDownEvent(m_canvasTree, onMouseDown_Tree);
+    addMouseMoveEvent(m_canvasTree, onMouseMove_Tree);
+    addMouseWheelEvent(m_canvasTree, onMouseWheel_Tree);
+    addMouseUpEvent(m_canvasTree, onMouseUp_Tree, onClick_Tree);
+    addTouchBeginEvent(m_canvasTree, onTouchBegin_Tree);
+    addTouchMoveEvent(m_canvasTree, onTouchMove_Tree);
+    addTouchEndEvent(m_canvasTree, onTouchEnd_Tree, onClick_Tree);
+
+    /*
+    * 重置大小 
+    */
+    var resizeAll = function() {
+        m_canvasTree.width = window.innerWidth;
+        m_canvasTree.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasTree.style.width = m_canvasTree.width + 'px';
+            m_canvasTree.style.height = m_canvasTree.height + 'px';
+            m_canvasTree.height = m_canvasTree.height* window.devicePixelRatio;
+            m_canvasTree.width = m_canvasTree.width * window.devicePixelRatio;
+            m_contextTree.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizeTree = new FCSize((m_canvasTree.width / m_ratio / m_paintTree.m_scaleFactorX), (m_canvasTree.height / m_ratio / m_paintTree.m_scaleFactorY));
+        m_tree.m_size = new FCSize(m_canvasSizeTree.cx, m_canvasSizeTree.cy);
+	    invalidate(m_paintTree);
+    };
+    
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+    };
+
+    invalidate(m_paintTree);
+    </script>
+</body>
+</html>

@@ -1,0 +1,604 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat的HTML5框架(开源)</title>
+<style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+</style>
+</head>
+<body>
+    <canvas id="chart2Canvas" width="1000" height="750">
+        Your browser does not support canvas element.
+    </canvas>
+    <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_chart.js" ></script>
+    <script type="text/javascript">
+    var m_canvasChart2 = document.getElementById("chart2Canvas"); //绘图区域
+    var m_contextChart2 = m_canvasChart2.getContext("2d"); //绘图上下文
+    m_canvasChart2.width = window.innerWidth;
+    m_canvasChart2.height = window.innerHeight;
+
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasChart2.style.width = m_canvasChart2.width + 'px';
+        m_canvasChart2.style.height = m_canvasChart2.height + 'px';
+        m_canvasChart2.height = m_canvasChart2.height* window.devicePixelRatio;
+        m_canvasChart2.width = m_canvasChart2.width * window.devicePixelRatio;
+        m_contextChart2.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+
+    var m_paintChart2 = new FCPaint(); //绘图对象
+    m_paintChart2.m_canvas = m_canvasChart2;
+    m_canvasChart2.m_paint = m_paintChart2;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintChart2.m_scaleFactorX = 2.5;
+        m_paintChart2.m_scaleFactorY = 2.5;
+    }
+    m_paintChart2.m_defaultUIStyle = "dark";
+    var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintChart2.m_defaultUIStyle = "light";
+    }
+        //实际绘图大小
+    var m_canvasSizeChart2 = new FCSize((m_canvasChart2.width / m_ratio / m_paintChart2.m_scaleFactorX), (m_canvasChart2.height / m_ratio / m_paintChart2.m_scaleFactorY));
+
+    var m_views_Chart2 = new Array(); //视图集合
+    m_canvasChart2.m_views = m_views_Chart2;
+    
+    // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchEnd_Chart2 = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchEnd_Chart2 <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchEnd_Chart2 = now;
+    }, {
+        passive: false
+    });
+
+    //K线视图
+    var m_chart2 = new FCChart(); 
+    m_chart2.m_paint = m_paintChart2;
+    if (m_chart2.m_paint.m_defaultUIStyle == "dark") {
+        m_chart2.m_backColor = "rgb(0,0,0)";
+        m_chart2.m_borderColor = "rgb(100,100,100)";
+        m_chart2.m_textColor = "rgb(255,255,255)";
+    } else if (m_chart2.m_paint.m_defaultUIStyle == "light") {
+        m_chart2.m_backColor = "rgb(255,255,255)";
+        m_chart2.m_borderColor = "rgb(150,150,150)";
+        m_chart2.m_textColor = "rgb(0,0,0)";
+	}
+    m_chart2.m_location = new FCPoint(0, 0);
+    m_chart2.m_size = new FCSize(m_canvasSizeChart2.cx, m_canvasSizeChart2.cy);
+    m_chart2.m_visible = true;
+    m_chart2.m_leftVScaleWidth = 70;
+    m_chart2.m_rightVScaleWidth = 0;
+    m_chart2.m_rightSpace = 80;
+    m_chart2.m_vScaleDistance = 35;
+    m_chart2.m_hScalePixel = 11;
+    m_chart2.m_hScaleHeight = 30;
+    m_chart2.m_candlePaddingTop = 30;
+    m_chart2.m_candlePaddingBottom = 20;
+    m_chart2.m_volPaddingTop = 20;
+    m_chart2.m_volPaddingBottom = 0;
+    m_chart2.m_indPaddingTop = 20;
+    m_chart2.m_indPaddingBottom = 20;
+    m_chart2.m_vScaleDistance = 35;
+    m_chart2.m_candleDivPercent = 1;
+    m_chart2.m_volDivPercent = 1;
+    m_chart2.m_indDivPercent = 1;
+    m_chart2.m_font = "12px Arial";
+    m_chart2.m_data = new Array();
+    m_chart2.m_cycle = "tick";
+    m_views_Chart2.push(m_chart2);
+    
+
+    /*
+    * 黑色风格
+    */
+    var toBlack_Chart = function(){
+       m_chart2.m_paint.m_defaultUIStyle = "dark";
+        m_chart2.m_backColor = "rgb(0,0,0)";
+        m_chart2.m_borderColor = "rgb(255,255,255)";
+        m_chart2.m_textColor = "rgb(255,255,255)";
+        m_chart2.m_scaleColor = "rgb(100,100,100)"; 
+        m_chart2.m_crossTipColor = "rgb(50,50,50)"; 
+        m_chart2.m_crossLineColor = "rgb(100,100,100)"; 
+        m_chart2.m_gridColor = "rgba(100,100,100,0.5)"; 
+       
+    };
+
+    /*
+    * 白色风格
+    */
+    var toWhite_Chart = function(){
+        m_chart2.m_paint.m_defaultUIStyle = "light";
+        m_chart2.m_backColor = "rgb(255,255,255)";
+        m_chart2.m_borderColor = "rgb(0,0,0)";
+        m_chart2.m_textColor = "rgb(0,0,0)";
+        m_chart2.m_scaleColor = "rgb(0,0,0)"; 
+        m_chart2.m_crossTipColor = "rgb(220,220,220)"; 
+        m_chart2.m_crossLineColor = "rgb(100,100,100)"; 
+        m_chart2.m_gridColor = "rgba(0,0,0,0.5)"; 
+    };
+    
+    if(m_chart2.m_paint.m_defaultUIStyle == "dark"){
+        toBlack_Chart();
+    }else if(m_chart2.m_paint.m_defaultUIStyle == "light"){
+        toWhite_Chart();
+    }
+ 
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_Chart2 = function(view, mp, buttons, clicks, delta) {
+       
+    };
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseDown_Chart2 = function(view, mp, buttons, clicks, delta) {
+        if (view.m_type == "chart") {
+            if (!view.m_data || view.m_data.length == 0){
+                return;
+            }
+	    }
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_Chart2 = function(view, mp, buttons, clicks, delta) {
+       if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+        if (view.m_type == "chart") {
+            if(delta > 0){
+                zoomOutChart(view);
+            }else if(delta < 0){
+                zoomInChart(view);
+            }
+            invalidateView(m_chart2, m_paintChart2);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_Chart2 = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "chart") {
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_Chart2 = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "chart") {
+            mouseMoveChart(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paintChart2);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_Chart2 = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "chart") {
+		    m_firstTouchIndexCache_Chart = -1;
+            m_secondTouchIndexCache_Chart = -1;
+	    }
+    };
+
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_Chart2 = function(view, mp, buttons, clicks, delta) {
+        if(view.m_type == "chart"){
+		    var firstTouch = false, secondTouch = false;
+		    var firstPoint = mp, secondPoint = mp;
+		    if(buttons == 1){
+		        firstTouch = true;
+		    }
+		    mouseMoveChart(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	        invalidateView(m_chart2, m_paintChart2);
+        }
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseUp_Chart2 = function(view, mp, buttons, clicks, delta) {
+        if (view.m_type == "chart") {
+            m_firstTouchIndexCache_Chart = -1;
+            m_secondTouchIndexCache_Chart = -1;
+	    }
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintChart2.onPaint = function(view, paint, clipRect) {
+        if(view.m_type == "chart"){
+	        drawChart(view, paint, clipRect);
+	    }
+    };
+    
+    /*
+    * 绘制线条
+    * chart:K线
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    * divIndex:图层
+    * datas:数据
+    * color:颜色
+    * selected:是否选中
+    */
+    var drawChartLines2 = function (chart, paint, clipRect, divIndex, datas, color, text) {
+        paint.beginPath();
+        var lastX = 0, lastY = 0;
+        var maxVisibleRecord = getChartMaxVisibleCount(chart, chart.m_hScalePixel, getChartWorkAreaWidth(chart));
+        var showLast = false;
+        for (var i = 0; i < datas.length; i++) {
+            var x = getChartX(chart, i + chart.m_firstVisibleIndex);
+            var value = datas[i];
+            var y = getChartY(chart, divIndex, value);
+            if (i > 0) {
+                paint.addLine(lastX, lastY, x, y)
+            }
+            if(i + chart.m_firstVisibleIndex == chart.m_data.length - 1){
+                showLast = true;
+            }
+            lastX = x;
+            lastY = y;
+        }
+        paint.drawPath(color, m_lineWidth_Chart * 2, 0);
+        paint.closePath();
+        if(showLast){  
+            var r = 10;
+            paint.fillEllipse(color, lastX - r, lastY - r, lastX + r, lastY + r);
+            if (chart.m_paint.m_defaultUIStyle == "dark") {
+                paint.drawEllipse("rgb(255,255,255)", 1, 0, lastX - r, lastY - r, lastX + r, lastY + r);
+            }else if (chart.m_paint.m_defaultUIStyle == "light"){
+                paint.drawEllipse("rgb(0,0,0)", 1, 0, lastX - r, lastY - r, lastX + r, lastY + r);
+            }
+            var font = "14px Arial";
+            var tSize = paint.textSize(text, font);
+            if (chart.m_paint.m_defaultUIStyle == "dark") {
+                paint.drawText(text, "rgb(255,255,255)", font, lastX - tSize.cx / 2, lastY + tSize.cy + r);
+            }else if (chart.m_paint.m_defaultUIStyle == "light"){
+                paint.drawText(text, "rgb(0,0,0)", font, lastX - tSize.cx / 2, lastY + tSize.cy + r);
+            }
+        }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintChart2.onPaintBorder = function(view, paint, clipRect) {
+    };
+    
+    /*
+    * 重写计算最大最小值
+    * chart:K线
+    */
+    m_chart2.onCalculateChartMaxMin = function(chart){
+        chart.m_candleMax = 0;
+        chart.m_candleMin = 0;
+        chart.m_volMax = 0;
+        chart.m_volMin = 0;
+        chart.m_indMin = 0;
+        chart.m_indMin = 0;
+        if (chart.m_data && chart.m_data.length > 0) {   
+            var lastValidIndex = chart.m_lastVisibleIndex;
+            if(chart.m_lastValidIndex != -1){
+                lastValidIndex = chart.m_lastValidIndex;
+            }          
+            for (var i = chart.m_firstVisibleIndex; i <= lastValidIndex; i++) {
+                if (i == chart.m_firstVisibleIndex) {
+                    chart.m_candleMax = chart.m_data[i].m_data1;
+                    chart.m_candleMin = chart.m_data[i].m_data1;
+                }else{
+                    if (chart.m_candleMax < chart.m_data[i].m_data1) {
+                        chart.m_candleMax = chart.m_data[i].m_data1;
+                    }
+                    if (chart.m_candleMin > chart.m_data[i].m_data1) {
+                        chart.m_candleMin = chart.m_data[i].m_data1;
+                    }
+                    if (chart.m_candleMax < chart.m_data[i].m_data2) {
+                        chart.m_candleMax = chart.m_data[i].m_data2;
+                    }
+                    if (chart.m_candleMin > chart.m_data[i].m_data2) {
+                        chart.m_candleMin = chart.m_data[i].m_data2;
+                    }
+                    if (chart.m_candleMax < chart.m_data[i].m_data3) {
+                        chart.m_candleMax = chart.m_data[i].m_data3;
+                    }
+                    if (chart.m_candleMin > chart.m_data[i].m_data3) {
+                        chart.m_candleMin = chart.m_data[i].m_data3;
+                    }
+                    if (chart.m_candleMax < chart.m_data[i].m_data4) {
+                        chart.m_candleMax = chart.m_data[i].m_data4;
+                    }
+                    if (chart.m_candleMin > chart.m_data[i].m_data4) {
+                        chart.m_candleMin = chart.m_data[i].m_data4;
+                    }
+                    if (chart.m_candleMax < chart.m_data[i].m_data5) {
+                        chart.m_candleMax = chart.m_data[i].m_data5;
+                    }
+                    if (chart.m_candleMin > chart.m_data[i].m_data5) {
+                        chart.m_candleMin = chart.m_data[i].m_data5;
+                    }
+                    if (chart.m_candleMax < chart.m_data[i].m_data6) {
+                        chart.m_candleMax = chart.m_data[i].m_data6;
+                    }
+                    if (chart.m_candleMin > chart.m_data[i].m_data6) {
+                        chart.m_candleMin = chart.m_data[i].m_data6;
+                    }
+                }
+            }
+        }
+    };
+    
+    var m_drawColors = new Array();
+    m_drawColors.push("rgb(59,174,218)");
+    m_drawColors.push("rgb(185,63,150)");
+    m_drawColors.push("rgb(219,68,83)");
+    m_drawColors.push("rgb(246,187,67)");
+    m_drawColors.push("rgb(216,112,173)");
+    m_drawColors.push("rgb(140,192,81)");
+    
+    /*
+    * 重写绘制线条的函数
+    * chart:K线
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintChart2.onPaintChartStock = function(chart, paint, clipRect) {
+        if(chart.m_data && chart.m_data.length > 0){
+            var datas1 = new Array();
+            var lastValidIndex = chart.m_lastVisibleIndex;
+            if(chart.m_lastValidIndex != -1){
+                lastValidIndex = chart.m_lastValidIndex;
+            }    
+            for (var i = chart.m_firstVisibleIndex; i <= lastValidIndex; i++) {
+                datas1.push(chart.m_data[i].m_data1);
+            }
+            drawChartLines2(chart, paint, clipRect, 0, datas1, m_drawColors[0], "项目1");
+            
+            var datas2 = new Array();
+            for (var i = chart.m_firstVisibleIndex; i <= lastValidIndex; i++) {
+                datas2.push(chart.m_data[i].m_data2);
+            }
+            drawChartLines2(chart, paint, clipRect, 0, datas2, m_drawColors[1], "项目2");
+            
+            var datas3 = new Array();
+            for (var i = chart.m_firstVisibleIndex; i <= lastValidIndex; i++) {
+                datas3.push(chart.m_data[i].m_data3);
+            }
+            drawChartLines2(chart, paint, clipRect, 0, datas3, m_drawColors[2], "项目3");
+            
+            var datas4 = new Array();
+            for (var i = chart.m_firstVisibleIndex; i <= lastValidIndex; i++) {
+                datas4.push(chart.m_data[i].m_data4);
+            }
+            drawChartLines2(chart, paint, clipRect, 0, datas4, m_drawColors[3], "项目4");
+            
+            var datas5 = new Array();
+            for (var i = chart.m_firstVisibleIndex; i <= lastValidIndex; i++) {
+                datas5.push(chart.m_data[i].m_data5);
+            }
+            drawChartLines2(chart, paint, clipRect, 0, datas5, m_drawColors[4], "项目5");
+            
+            var datas6 = new Array();
+            for (var i = chart.m_firstVisibleIndex; i <= lastValidIndex; i++) {
+                datas6.push(chart.m_data[i].m_data6);
+            }
+            drawChartLines2(chart, paint, clipRect, 0, datas6, m_drawColors[5], "项目6");
+        }
+    };
+    
+    /*
+    * 重写十字线的函数
+    * chart:K线
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintChart2.onPaintChartCrossLine = function(chart, paint, clipRect) {
+        if(!chart.m_data || chart.m_data.length == 0){
+            return;
+        }
+        var candleDivHeight = getCandleDivHeight(chart);
+        var volDivHeight = getVolDivHeight(chart);
+        var indDivHeight = getIndDivHeight(chart);
+        var crossLineIndex = chart.m_crossStopIndex;
+        if (crossLineIndex == -1) {
+            crossLineIndex = chart.m_lastVisibleIndex;
+        }
+        var str = "A" + crossLineIndex;
+        if (str == "ANaN") {
+            crossLineIndex = chart.m_lastVisibleIndex;
+        }
+        var drawTitles = new Array();
+        drawTitles.push("项目1 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目2 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目3 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目4 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目5 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目6 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+
+        var iLeft = chart.m_leftVScaleWidth + 5;
+        for(var i = 0; i < drawTitles.length; i++){
+            var tSize = paint.textSize(drawTitles[i], chart.m_font);
+            paint.drawText(drawTitles[i], m_drawColors[i], chart.m_font, iLeft, 5 + tSize.cy / 2);
+            iLeft += tSize.cx + 5;
+        }
+    };
+    
+    addMouseDownEvent(m_canvasChart2, onMouseDown_Chart2);
+    addMouseMoveEvent(m_canvasChart2, onMouseMove_Chart2);
+    addMouseWheelEvent(m_canvasChart2, onMouseWheel_Chart2);
+    addMouseUpEvent(m_canvasChart2, onMouseUp_Chart2, onClick_Chart2);
+    addTouchBeginEvent(m_canvasChart2, onTouchBegin_Chart2);
+    addTouchMoveEvent(m_canvasChart2, onTouchMove_Chart2);
+    addTouchEndEvent(m_canvasChart2, onTouchEnd_Chart2, onClick_Chart2);
+
+    /*
+     * 重置大小
+     */ 
+    var resizeAll = function() {
+        m_canvasChart2.width = window.innerWidth;
+        m_canvasChart2.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasChart2.style.width = m_canvasChart2.width + 'px';
+            m_canvasChart2.style.height = m_canvasChart2.height + 'px';
+            m_canvasChart2.height = m_canvasChart2.height* window.devicePixelRatio;
+            m_canvasChart2.width = m_canvasChart2.width * window.devicePixelRatio;
+            m_contextChart2.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizeChart2 = new FCSize((m_canvasChart2.width / m_ratio / m_paintChart2.m_scaleFactorX), (m_canvasChart2.height / m_ratio / m_paintChart2.m_scaleFactorY));
+        m_chart2.m_size = new FCSize(m_canvasSizeChart2.cx, m_canvasSizeChart2.cy);
+        resetChartVisibleRecord(m_chart2);
+        checkChartLastVisibleIndex(m_chart2);
+        calculateChartMaxMin(m_chart2);
+	    invalidate(m_paintChart2);
+    };
+    
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+
+    invalidate(m_paintChart2);
+    
+    /*
+    * 插入模拟数据
+    */
+    var insertData = function(){
+        var lastData = null;
+        if(m_chart2.m_data.length > 1){
+            lastData = m_chart2.m_data[m_chart2.m_data.length - 1];
+        }
+        var data = new SecurityData();
+        data.m_close = 0;
+        data.m_date = Date.now();
+        data.m_data1 = Math.random() * 100 - 50;
+        data.m_data2 = Math.random() * 100 - 50;
+        data.m_data3 = Math.random() * 100 - 50;
+        data.m_data4 = Math.random() * 100 - 50;
+        data.m_data5 = Math.random() * 100 - 50;
+        data.m_data6 = Math.random() * 100 - 50;
+        if(lastData){
+            data.m_data1 = data.m_data1 + lastData.m_data1;
+            data.m_data2 = data.m_data2 + lastData.m_data2;
+            data.m_data3 = data.m_data3 + lastData.m_data3;
+            data.m_data4 = data.m_data4 + lastData.m_data4;
+            data.m_data5 = data.m_data5 + lastData.m_data5;
+            data.m_data6 = data.m_data6 + lastData.m_data6;
+        }
+        m_chart2.m_data.push(data);
+        resetChartVisibleRecord(m_chart2);
+        checkChartLastVisibleIndex(m_chart2);
+        m_chart2.onCalculateChartMaxMin(m_chart2);
+        invalidateView(m_chart2, m_paintChart2);
+    };
+    
+    setInterval(insertData, 20);
+    </script>
+<br/>
+<br/>
+<br/>
+</body>
+</html>

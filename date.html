@@ -1,0 +1,493 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat</title>
+<style>
+			html,
+			body {
+				width: 100%;
+				height: 100%
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+
+</style>
+</head>
+<body>
+    <canvas id="dateCanvas" width="1200" height="800">
+        Your browser does not support canvas element
+    </canvas>
+    <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_date.js" ></script>
+    <script type="text/javascript">
+    var m_canvasDate = document.getElementById("dateCanvas"); //绘图区域
+    var m_contextDate = m_canvasDate.getContext("2d"); //绘图上下文
+    m_canvasDate.width = window.innerWidth;
+    m_canvasDate.height = window.innerHeight;
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasDate.style.width = m_canvasDate.width + 'px';
+        m_canvasDate.style.height = m_canvasDate.height + 'px';
+        m_canvasDate.height = m_canvasDate.height* window.devicePixelRatio;
+        m_canvasDate.width = m_canvasDate.width * window.devicePixelRatio;
+        m_contextDate.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+    
+    var m_paintDate = new FCPaint(); //绘图对象
+    m_paintDate.m_defaultUIStyle = "dark";
+    var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintDate.m_defaultUIStyle = "light";
+    }
+    m_paintDate.m_canvas = m_canvasDate;
+    m_canvasDate.m_paint = m_paintDate;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintDate.m_scaleFactorX = 2.5;
+        m_paintDate.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSizeDate = new FCSize((m_canvasDate.width / m_ratio /  m_paintDate.m_scaleFactorX), (m_canvasDate.height / m_ratio / m_paintDate.m_scaleFactorY));
+
+    var m_views_Date = new Array(); //视图集合
+    m_canvasDate.m_views = m_views_Date;
+     
+    var m_jsonData = null;
+
+    /*
+    * 绘制示例数据
+    * paint:绘图对象
+    * bounds:区域
+    * font:字体
+    * diff:偏差
+    * number:数量
+    * inThis:是否在本期
+    */
+    var drawDemoKLine = function(paint, bounds, font, diff, number, inThis){
+        if(m_jsonData){
+	        var maxValue = 0, minValue = 0, startValue = 0, endValue = 0;
+	        for (var i = m_jsonData.data.length - diff - number; i < m_jsonData.data.length - diff; i++) {
+	            var data = m_jsonData.data[i];
+	            if(i == m_jsonData.data.length - diff - number){
+	                maxValue = data.high;
+	                minValue = data.low;
+	                startValue = data.open;
+	            }else{
+	                if(maxValue < data.high){
+	                    maxValue = data.high;
+	                }
+	                if(minValue > data.low){
+	                    minValue = data.low;
+	                }
+	            }
+	        }
+	        endValue = m_jsonData.data[m_jsonData.data.length - diff - 1].close;
+	        if(maxValue > 0){
+	            var lastX = bounds.left + 5;
+	            var percentWidth = (bounds.right - bounds.left - 10) / number;
+	            for (var i = m_jsonData.data.length - diff - number; i < m_jsonData.data.length - diff; i++) {
+	                var data = m_jsonData.data[i];
+	                var closeY = bounds.bottom - 20 - (data.close - minValue) / (maxValue - minValue) * (bounds.bottom - bounds.top - 40);
+	                var openY = bounds.bottom - 20 - (data.open - minValue) / (maxValue - minValue) * (bounds.bottom - bounds.top - 40);
+	                var highY = bounds.bottom - 20 - (data.high - minValue) / (maxValue - minValue) * (bounds.bottom - bounds.top - 40);
+	                var lowY = bounds.bottom - 20 - (data.low - minValue) / (maxValue - minValue) * (bounds.bottom - bounds.top - 40);
+	                var dWidth = parseInt(percentWidth / 2) - 1;
+	                if(dWidth < 1){
+	                    dWidth = 1;
+	                }
+	                if (inThis) {
+	                    if(data.close >= data.open){   
+	                        paint.drawLine("rgb(219,68,83)", 1, 0, lastX, highY, lastX, lowY);
+	                        paint.fillRect("rgb(219,68,83)", lastX - dWidth, closeY, lastX + dWidth, openY);
+	                    }else{
+	                        paint.drawLine("rgb(15,193,118)", 1, 0, lastX, highY, lastX, lowY);
+	                        paint.fillRect("rgb(15,193,118)", lastX - dWidth, openY, lastX + dWidth, closeY);
+	                    }
+	                }else{
+	                     if(data.close >= data.open){   
+	                        paint.drawLine("rgba(219,68,83,0.3)", 1, 0, lastX, highY, lastX, lowY);
+	                        paint.fillRect("rgba(219,68,83,0.3)", lastX - dWidth, closeY, lastX + dWidth, openY);
+	                    }else{
+	                        paint.drawLine("rgba(15,193,118,0.3)", 1, 0, lastX, highY, lastX, lowY);
+	                        paint.fillRect("rgba(15,193,118,0.3)", lastX - dWidth, openY, lastX + dWidth, closeY);
+	                    }
+	                }
+	                lastX += percentWidth;
+	            }
+	            var diffRange = (endValue - startValue) / startValue * 100;
+	            var diffRangeStr = diffRange.toFixed(2) + "%";
+	            var dSize = paint.textSize(diffRangeStr, font);
+	            paint.drawLine("rgb(200,200,200)", 1, [3,3], bounds.left + 2, bounds.bottom - dSize.cy * 2 - 5, bounds.right - 2, bounds.bottom - dSize.cy * 2 - 5);
+	            if(diffRange >= 0){
+	                if (inThis) {
+	                    paint.drawText(diffRangeStr, "rgb(219,68,83)", font, bounds.left + (bounds.right - bounds.left - dSize.cx) / 2, bounds.bottom - dSize.cy - 2);
+	                }else{
+	                    paint.drawText(diffRangeStr, "rgba(219,68,83,0.3)", font, bounds.left + (bounds.right - bounds.left - dSize.cx) / 2, bounds.bottom - dSize.cy - 2);
+	                }
+	            }else{
+	                if (inThis) {
+	                    paint.drawText(diffRangeStr, "rgb(15,193,118)", font, bounds.left + (bounds.right - bounds.left - dSize.cx) / 2, bounds.bottom - dSize.cy - 2);
+	                }else{
+	                    paint.drawText(diffRangeStr, "rgba(15,193,118,0.3)", font, bounds.left + (bounds.right - bounds.left - dSize.cx) / 2, bounds.bottom - dSize.cy - 2);
+	                }
+	            }
+	        }
+	    }
+    };
+
+    /*
+    * 绘制日的按钮
+    * dayButton:日期按钮
+    * paint:绘图对象
+    */
+    m_paintDate.onPaintCalendarDayButton = function (dayButton, paint) {
+	    if (dayButton.m_day) {
+		    var calendar = dayButton.m_calendar;
+		    var bounds = dayButton.m_bounds;
+		    var text = dayButton.m_day.m_day;
+		    var tSize = paint.textSize(text, dayButton.m_font);
+		    if(dayButton.m_backColor){
+		        paint.fillRect(dayButton.m_backColor, bounds.left + 2, bounds.top + 2, bounds.right - 2, bounds.bottom - 2);
+		    }
+		    if (dayButton.m_inThisMonth) {
+		        paint.drawText(text, dayButton.m_textColor, dayButton.m_font, bounds.left + 5, bounds.top + 7 + tSize.cy / 2);
+	        } else {
+		        paint.drawText(text, dayButton.m_textColor2, dayButton.m_font, bounds.left + 5, bounds.top + 7 + tSize.cy / 2);
+	        }
+		    drawDemoKLine(paint, bounds, dayButton.m_font, dayButton.m_day.m_day * 20, 20, dayButton.m_inThisMonth);
+		    if(dayButton.m_borderColor){
+	            paint.drawRect(dayButton.m_borderColor, 1, 0, bounds.left + 2, bounds.top + 2, bounds.right - 2, bounds.bottom - 2);
+	        }
+	    }
+    };
+
+    /*
+    * 绘制月的按钮
+    * monthButton:月按钮
+    * paint:绘图对象
+    */
+    m_paintDate.onPaintCalendarMonthButton = function (monthButton, paint) {
+	    var calendar = monthButton.m_calendar;
+	    var bounds = monthButton.m_bounds;
+	    var text = getMonthStr(monthButton.m_month);
+	    var tSize = paint.textSize(text, monthButton.m_font);
+	    if(monthButton.m_backColor){
+	        paint.fillRect(monthButton.m_backColor, bounds.left + 2, bounds.top + 2, bounds.right - 2, bounds.bottom - 2);
+	    }
+	    paint.drawText(text, monthButton.m_textColor, monthButton.m_font, bounds.left + 5, bounds.top + 7 + tSize.cy / 2);
+	    drawDemoKLine(paint, bounds, monthButton.m_font, monthButton.m_month * 40, 30, true);
+	    if(monthButton.m_borderColor){
+	        paint.drawRect(monthButton.m_borderColor, 1, 0, bounds.left + 2, bounds.top + 2, bounds.right - 2, bounds.bottom - 2);
+	    }
+    };
+
+    /*
+    * 绘制年的按钮
+    * yearButton:年按钮
+    * paint:绘图对象
+    */
+    m_paintDate.onPaintCalendarYearButton = function (yearButton, paint) {
+	    var calendar = yearButton.m_calendar;
+	    var bounds = yearButton.m_bounds;
+	    var text = yearButton.m_year;
+	    var tSize = paint.textSize(text, yearButton.m_font);
+	    if(yearButton.m_backColor){
+	        paint.fillRect(yearButton.m_backColor, bounds.left + 2, bounds.top + 2, bounds.right - 2, bounds.bottom - 2);
+	    }
+	    paint.drawText(text, yearButton.m_textColor, yearButton.m_font, bounds.left + 5, bounds.top + 7 + tSize.cy / 2);
+	    drawDemoKLine(paint, bounds, yearButton.m_font, parseInt(Math.random() * 600), 30, true);
+	    if(yearButton.m_borderColor){
+	        paint.drawRect(yearButton.m_borderColor, 1, 0, bounds.left + 2, bounds.top + 2, bounds.right - 2, bounds.bottom - 2);
+	    }
+    };
+
+    // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+	    if (event.touches.length > 1) {
+		    event.preventDefault();
+	    }
+    }, {
+	    passive: false
+    });
+
+    // 禁用双击放大
+    var m_lastTouchEnd_Date = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+	    var now = Date.now();
+	    if (now - m_lastTouchEnd_Date <= 300) {
+		    event.preventDefault();
+	    }
+	    m_lastTouchEnd_Date = now;
+    }, {
+	    passive: false
+    });
+
+    //创建日历
+    var m_calendar = new FCCalendar();
+    m_calendar.m_paint = m_paintDate;
+    m_calendar.m_borderColor = null;
+    m_calendar.m_textColor = null;
+    m_calendar.m_location = new FCPoint(0, 0);
+    m_calendar.m_size = new FCSize(m_canvasSizeDate.cx, m_canvasSizeDate.cy);
+    m_calendar.m_visible = true;
+    m_calendar.m_useAnimation = true;
+    m_views_Date.push(m_calendar);
+    initCalendar(m_calendar);
+    m_calendar.m_selectedDay = getYear(m_calendar.m_years, 2022).m_months.get(10).m_days.get(1);
+    updateCalendar(m_calendar);
+    if (m_calendar.m_paint.m_defaultUIStyle == "dark") {
+        m_calendar.m_backColor = "rgb(0,0,0)";
+        m_calendar.m_headDiv.m_backColor = "rgb(0,0,0)";
+        m_calendar.m_headDiv.m_textColor = "rgb(255,255,255)";
+        var dayButtonsSize = m_calendar.m_dayDiv.m_dayButtons.length;
+		for (var i = 0; i < dayButtonsSize; i++) {
+			var dayButton = m_calendar.m_dayDiv.m_dayButtons[i];
+			var dayButton_am = m_calendar.m_dayDiv.m_dayButtons[i];
+            dayButton.m_textColor2 = "rgb(200,200,200)";
+            dayButton.m_textColor = "rgb(255,255,255)";
+            dayButton.m_borderColor = "rgb(100,100,100)";
+            dayButton_am.m_textColor2 = "rgb(200,200,200)";
+            dayButton_am.m_textColor = "rgb(255,255,255)";
+            dayButton_am.m_borderColor = "rgb(100,100,100)";
+		}
+		var monthButtonsSize = m_calendar.m_monthDiv.m_monthButtons.length;
+		for (var i = 0; i < monthButtonsSize; i++) {
+			var monthButton = m_calendar.m_monthDiv.m_monthButtons[i];
+			var monthButton_am = m_calendar.m_monthDiv.m_monthButtons[i];
+            monthButton.m_textColor = "rgb(255,255,255)";
+            monthButton.m_borderColor = "rgb(100,100,100)";
+            monthButton_am.m_textColor = "rgb(255,255,255)";
+            monthButton_am.m_borderColor = "rgb(100,100,100)";
+		}
+		var yearButtonsSize = m_calendar.m_yearDiv.m_yearButtons.length;
+		for (var i = 0; i < yearButtonsSize; i++) {
+			var yearButton = m_calendar.m_yearDiv.m_yearButtons[i];
+			var yearButton_am = m_calendar.m_yearDiv.m_yearButtons[i];
+			yearButton.m_textColor = "rgb(255,255,255)";
+            yearButton.m_borderColor = "rgb(100,100,100)";
+            yearButton.m_textColor = "rgb(255,255,255)";
+            yearButton.m_borderColor = "rgb(100,100,100)";
+		}
+    } else if (m_calendar.m_paint.m_defaultUIStyle == "light") {
+        m_calendar.m_backColor = "rgb(255,255,255)";
+        m_calendar.m_headDiv.m_backColor = "rgb(255,255,255)";
+        m_calendar.m_headDiv.m_textColor = "rgb(0,0,0)";
+        var dayButtonsSize = m_calendar.m_dayDiv.m_dayButtons.length;
+		for (var i = 0; i < dayButtonsSize; i++) {
+			var dayButton = m_calendar.m_dayDiv.m_dayButtons[i];
+			var dayButton_am = m_calendar.m_dayDiv.m_dayButtons[i];
+            dayButton.m_textColor2 = "rgb(50,50,50)";
+            dayButton.m_textColor = "rgb(0,0,0)";
+            dayButton.m_borderColor = "rgb(150,150,150)";
+            dayButton_am.m_textColor2 = "rgb(50,50,50)";
+            dayButton_am.m_textColor = "rgb(0,0,0)";
+            dayButton_am.m_borderColor = "rgb(150,150,150)";
+		}
+		var monthButtonsSize = m_calendar.m_monthDiv.m_monthButtons.length;
+		for (var i = 0; i < monthButtonsSize; i++) {
+			var monthButton = m_calendar.m_monthDiv.m_monthButtons[i];
+			var monthButton_am = m_calendar.m_monthDiv.m_monthButtons[i];
+            monthButton.m_textColor = "rgb(0,0,0)";
+            monthButton.m_borderColor = "rgb(150,150,150)";
+            monthButton_am.m_textColor = "rgb(0,0,0)";
+            monthButton_am.m_borderColor = "rgb(150,150,150)";
+		}
+		var yearButtonsSize = m_calendar.m_yearDiv.m_yearButtons.length;
+		for (var i = 0; i < yearButtonsSize; i++) {
+			var yearButton = m_calendar.m_yearDiv.m_yearButtons[i];
+			var yearButton_am = m_calendar.m_yearDiv.m_yearButtons[i];
+			yearButton.m_textColor = "rgb(0,0,0)";
+            yearButton.m_borderColor = "rgb(150,150,150)";
+            yearButton_am.m_textColor = "rgb(0,0,0)";
+            yearButton_am.m_borderColor = "rgb(150,150,150)";
+		}
+	}
+
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_Date = function (view, mp, buttons, clicks, delta) {
+	    if (view == m_calendar) {
+
+        }
+    };
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseDown_Date = function (view, mp, buttons, clicks, delta) {
+	    if (view.m_type == "calendar") {
+		    clickCalendar(mp, view);
+	    }
+    };
+
+    /*
+    * 鼠标移动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_Date = function(view, mp, buttons, clicks, delta) {
+	    if (view == m_calendar) {
+
+	    }
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_Date = function(view, mp, buttons, clicks, delta) {
+	     if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+    };
+
+    /*
+    * 鼠标抬起实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseUp_Date = function (view, mp, buttons, clicks, delta) {
+	    if (view == m_calendar) {
+
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_Date = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "calendar") {
+		    clickCalendar(firstPoint, view);
+	    }
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintDate.onPaint = function (view, paint, clipRect) {
+	    if (view.m_type == "calendar") {
+		    drawCalendar(view, paint);
+	    }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintDate.onPaintBorder = function (view, paint, clipRect) {
+    };
+    
+    /*
+     * 重置大小
+     */ 
+    var resizeAll = function() {
+        m_canvasDate.width = window.innerWidth;
+        m_canvasDate.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasDate.style.width = m_canvasDate.width + 'px';
+            m_canvasDate.style.height = m_canvasDate.height + 'px';
+            m_canvasDate.height = m_canvasDate.height* window.devicePixelRatio;
+            m_canvasDate.width = m_canvasDate.width * window.devicePixelRatio;
+            m_contextDate.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizeDate = new FCSize((m_canvasDate.width / m_ratio /  m_paintDate.m_scaleFactorX), (m_canvasDate.height / m_ratio / m_paintDate.m_scaleFactorY));
+        m_calendar.m_size = new FCSize(m_canvasSizeDate.cx, m_canvasSizeDate.cy);
+        updateCalendar(m_calendar);
+	    invalidate(m_paintDate);
+    };
+    
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+
+    addMouseDownEvent(m_canvasDate, onMouseDown_Date);
+    addTouchBeginEvent(m_canvasDate, onTouchBegin_Date);
+    addMouseMoveEvent(m_canvasDate, onMouseMove_Date);
+    addMouseWheelEvent(m_canvasDate, onMouseWheel_Date);
+    addMouseUpEvent(m_canvasDate, onMouseUp_Date, onClick_Date);
+
+    /*
+    * 日历的滚动秒表
+    */
+    var checkCalendar = function () {
+	    calendarTimer(m_calendar);
+    };
+
+    setInterval(checkCalendar, 50);
+
+    invalidate(m_paintDate);
+
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.open("GET", "https://api.coincap.io/v2/candles?exchange=binance&interval=d1&baseId=bitcoin&quoteId=tether", true);
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {	
+            var result = xmlhttp.responseText;
+            m_jsonData = eval('(' + result + ')');
+            invalidateView(m_calendar, m_paintDate);
+        }
+    }
+    xmlhttp.send(null);
+    </script>
+</body>
+</html>

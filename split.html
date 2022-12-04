@@ -1,0 +1,394 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat的HTML5框架(开源)</title>
+<style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+</style>
+</head>
+<body>
+    <input type="button" value="从左至右" onclick="javascript:changeSplitLayout('lefttoright');"/>
+    <input type="button" value="从上至下" onclick="javascript:changeSplitLayout('toptobottom');"/>
+    <input type="button" value="从右至左" onclick="javascript:changeSplitLayout('righttoleft');"/>
+    <input type="button" value="从下至上" onclick="javascript:changeSplitLayout('bottomtotop');"/>
+    <input type="button" value="绝对值" onclick="javascript:changeSplitMode('absolutesize');"/>
+    <input type="button" value="百分比" onclick="javascript:changeSplitMode('percentsize');"/><br/>
+    <canvas id="splitCanvas" width="800" height="800" >
+        Your browser does not support canvas element.
+    </canvas>
+    <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_split.js" ></script>
+    <script type="text/javascript" src="facecat_btn.js" ></script>
+    <script type="text/javascript" src="facecat_div.js" ></script>
+    <script type="text/javascript">
+    var m_canvasSplit = document.getElementById("splitCanvas"); //绘图区域
+    var m_contextSplit = m_canvasSplit.getContext("2d"); //绘图上下文
+    m_canvasSplit.width = window.innerWidth;
+    m_canvasSplit.height = window.innerHeight;
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasSplit.style.width = m_canvasSplit.width + 'px';
+        m_canvasSplit.style.height = m_canvasSplit.height + 'px';
+        m_canvasSplit.height = m_canvasSplit.height* window.devicePixelRatio;
+        m_canvasSplit.width = m_canvasSplit.width * window.devicePixelRatio;
+        m_contextSplit.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+
+    var m_paintSplit = new FCPaint(); //绘图对象
+    m_paintSplit.m_defaultUIStyle = "dark";
+        var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintSplit.m_defaultUIStyle = "light";
+    }
+    m_paintSplit.m_canvas = m_canvasSplit;
+    m_canvasSplit.m_paint = m_paintSplit;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintSplit.m_scaleFactorX = 2.5;
+        m_paintSplit.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSizeSplit = new FCSize((m_canvasSplit.width / m_ratio / m_paintSplit.m_scaleFactorX), (m_canvasSplit.height / m_ratio / m_paintSplit.m_scaleFactorY));
+
+    var m_views_Split = new Array(); //视图集合
+    m_canvasSplit.m_views = m_views_Split;
+    
+    // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchEnd_Split = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchEnd_Split <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchEnd_Split = now;
+    }, {
+        passive: false
+    });
+
+    //创建图层
+    var m_split = new FCSplitLayoutDiv();
+    var m_splitter = new FCView();
+
+    //初始化图层
+    var initDiv = function(){
+        m_split.m_paint = m_paintSplit;
+        if (m_split.m_paint.m_defaultUIStyle == "dark") {
+            m_split.m_backColor = "rgb(0,0,0)";
+            m_split.m_borderColor = "rgb(100,100,100)";
+            m_split.m_textColor = "rgb(255,255,255)";
+        } else if (m_split.m_paint.m_defaultUIStyle == "light") {
+            m_split.m_backColor = "rgb(255,255,255)";
+            m_split.m_borderColor = "rgb(150,150,150)";
+            m_split.m_textColor = "rgb(0,0,0)";
+	    }
+        m_split.m_location = new FCPoint(0, 0);
+        m_split.m_size = new FCSize(m_canvasSizeSplit.cx, m_canvasSizeSplit.cy);
+        m_split.m_visible = true;
+        
+        m_views_Split.push(m_split);
+        
+         if (m_split.m_paint.m_defaultUIStyle == "dark") {
+            m_splitter.m_backColor = "rgb(150,150,150)";
+        } else if (m_split.m_paint.m_defaultUIStyle == "light") {
+            m_splitter.m_backColor = "rgb(100,100,100)";
+	    }
+        
+        m_split.m_views.push(m_splitter);
+        m_split.m_splitter = m_splitter;
+        m_splitter.m_location = new FCPoint(200, 0);
+        m_splitter.m_size = new FCSize(5, m_canvasSizeSplit.cy);
+        m_splitter.m_paint = m_paintSplit;
+        
+        var firstView = new FCView();
+        firstView.m_backColor = "rgb(255,0,0)";
+        firstView.m_location = new FCPoint(0, 0);
+        firstView.m_size = new FCSize(0, 0);
+        firstView.m_paint = m_paintSplit;
+        m_split.m_views.push(firstView);
+        m_split.m_firstView = firstView;
+        
+        var secondView = new FCView();
+        secondView.m_backColor = "rgb(0,255,0)";
+        secondView.m_location = new FCPoint(0, 0);
+        secondView.m_size = new FCSize(0, 0);
+        secondView.m_paint = m_paintSplit;
+        m_split.m_views.push(secondView);
+        m_split.m_secondView = secondView;
+        m_split.m_oldSize = new FCSize(m_canvasSizeSplit.cx, m_canvasSizeSplit.cy);
+        resetSplitLayoutDiv(m_split);
+    };
+
+    initDiv();
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_Split = function(view, mp, buttons, clicks, delta) {
+    };
+
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseDown_Split = function(view, mp, buttons, clicks, delta) {
+	     if (view.m_type == "split") {
+		    var firstTouch = false, secondTouch = false;
+		    var firstPoint = mp, secondPoint = mp;
+		    if (buttons == 1) {
+			    firstTouch = true;
+		    }
+	    }
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_Split = function (view, mp, buttons, clicks, delta) {
+        if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_Split = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "split") {
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_Split = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "split") {
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_Split = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "split") {
+	    }
+    };
+    
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_Split = function (view, mp, buttons, clicks, delta) {
+         if (view.m_type == "split") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+        }
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseUp_Split = function (view, mp, buttons, clicks, delta) {
+       if (view.m_type == "split") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+        }
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintSplit.onPaint = function (view, paint, clipRect) {
+	    if (view.m_type == "split") {
+	        drawDiv(view, paint, clipRect);
+	    }
+	    else{
+	        drawButton(view, paint, clipRect);
+	    }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintSplit.onPaintBorder = function (view, paint, clipRect) {
+	    if (view.m_type == "split") {
+	        drawDivBorder(view, paint, clipRect);
+	    }
+    };
+    
+    addMouseDownEvent(m_canvasSplit, onMouseDown_Split);
+    addMouseMoveEvent(m_canvasSplit, onMouseMove_Split);
+    addMouseWheelEvent(m_canvasSplit, onMouseWheel_Split);
+    addMouseUpEvent(m_canvasSplit, onMouseUp_Split, onClick_Split);
+    addTouchBeginEvent(m_canvasSplit, onTouchBegin_Split);
+    addTouchMoveEvent(m_canvasSplit, onTouchMove_Split);
+    addTouchEndEvent(m_canvasSplit, onTouchEnd_Split, onClick_Split);
+
+    /*
+     * 重置大小
+     */ 
+    var resizeAll = function() {
+        m_canvasSplit.width = window.innerWidth;
+        m_canvasSplit.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasSplit.style.width = m_canvasSplit.width + 'px';
+            m_canvasSplit.style.height = m_canvasSplit.height + 'px';
+            m_canvasSplit.height = m_canvasSplit.height* window.devicePixelRatio;
+            m_canvasSplit.width = m_canvasSplit.width * window.devicePixelRatio;
+            m_contextSplit.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizeSplit = new FCSize((m_canvasSplit.width / m_ratio / m_paintSplit.m_scaleFactorX), (m_canvasSplit.height / m_ratio / m_paintSplit.m_scaleFactorY));
+        m_split.m_size = new FCSize(m_canvasSizeSplit.cx, m_canvasSizeSplit.cy);  
+        resetSplitLayoutDiv(m_split);
+	    invalidate(m_paintSplit);
+    	
+    };
+    
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+    };
+
+    invalidate(m_paintSplit);
+
+    /*
+    * 切换布局
+    * mode:布局方式
+    */
+    var changeSplitLayout = function(layout){
+        m_split.m_layoutStyle = layout;
+        if(layout == "lefttoright"){
+            if(m_split.m_splitMode == "percentsize"){
+                m_splitter.m_location = new FCPoint(m_canvasSizeSplit.cx / 2, 0);
+            }else{
+                m_splitter.m_location = new FCPoint(200, 0);
+            }
+            m_splitter.m_size = new FCSize(5, m_canvasSizeSplit.cy);
+        }else if(layout == "righttoleft"){
+            if(m_split.m_splitMode == "percentsize"){
+                m_splitter.m_location = new FCPoint(m_canvasSizeSplit.cx / 2, 0);
+            }else{
+                m_splitter.m_location = new FCPoint(m_canvasSizeSplit.cx - 200, 0);
+            }
+            m_splitter.m_size = new FCSize(5, m_canvasSizeSplit.cy);
+        }else if(layout == "toptobottom"){
+            if(m_split.m_splitMode == "percentsize"){
+                m_splitter.m_location = new FCPoint(0, m_canvasSizeSplit.cy / 2);
+            }else{
+                m_splitter.m_location = new FCPoint(0, 200);
+            }
+            m_splitter.m_size = new FCSize(m_canvasSizeSplit.cx, 5);
+        }else if(layout == "bottomtotop"){
+            if(m_split.m_splitMode == "percentsize"){
+                m_splitter.m_location = new FCPoint(0, m_canvasSizeSplit.cy / 2);
+            }else{
+                m_splitter.m_location = new FCPoint(0, m_canvasSizeSplit.cy - 200);
+            }
+            m_splitter.m_size = new FCSize(m_canvasSizeSplit.cx, 5);
+        }
+        resetSplitLayoutDiv(m_split);
+	    invalidate(m_paintSplit);
+    };
+    
+    /*
+    * 切换模式
+    */
+    var changeSplitMode = function(mode){
+        m_split.m_splitMode = mode;
+        m_split.m_splitPercent = -1;
+        changeSplitLayout(m_split.m_layoutStyle);
+    };
+    </script>
+</body>
+</html>

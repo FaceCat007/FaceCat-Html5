@@ -1,0 +1,331 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat的HTML5框架(开源)</title>
+<style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+</style>
+</head>
+<body>
+    <canvas id="inputCanvas" width="500" height="300" >
+        Your browser does not support canvas element.
+    </canvas>
+   <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_btn.js" ></script>
+   <script type="text/javascript" src="facecat_input.js" ></script>
+   <script type="text/javascript">
+   var m_canvasInput = document.getElementById("inputCanvas"); //绘图区域
+    var m_contextInput = m_canvasInput.getContext("2d"); //绘图上下文
+    m_canvasInput.width = window.innerWidth;
+    m_canvasInput.height = window.innerHeight;
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasInput.style.width = m_canvasInput.width + 'px';
+        m_canvasInput.style.height = m_canvasInput.height + 'px';
+        m_canvasInput.height = m_canvasInput.height* window.devicePixelRatio;
+        m_canvasInput.width = m_canvasInput.width * window.devicePixelRatio;
+        m_contextInput.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+    var m_paintInput = new FCPaint(); //绘图对象
+    m_paintInput.m_defaultUIStyle = "dark";
+    var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintInput.m_defaultUIStyle = "light";
+    }
+    m_paintInput.m_canvas = m_canvasInput;
+    m_canvasInput.m_paint = m_paintInput;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintInput.m_scaleFactorX = 2.5;
+        m_paintInput.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSizeInput = new FCSize((m_canvasInput.width / m_ratio / m_paintInput.m_scaleFactorX), (m_canvasInput.height / m_ratio / m_paintInput.m_scaleFactorY));
+
+    var m_views_Input = new Array(); //视图集合
+    m_canvasInput.m_views = m_views_Input;
+   
+   // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchEnd_Input = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchEnd_Input <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchEnd_Input = now;
+    }, {
+        passive: false
+    });
+
+    //创建多页夹
+    var m_inputDiv = new FCView();
+    
+    //初始化多页夹
+    var initInput = function(){
+        m_inputDiv.m_paint = m_paintInput;
+        if (m_inputDiv.m_paint.m_defaultUIStyle == "dark") {
+            m_inputDiv.m_backColor = "rgb(0,0,0)";
+            m_inputDiv.m_borderColor = "rgb(100,100,100)";
+            m_inputDiv.m_textColor = "rgb(255,255,255)";
+        } else if (m_inputDiv.m_paint.m_defaultUIStyle == "light") {
+            m_inputDiv.m_backColor = "rgb(255,255,255)";
+            m_inputDiv.m_borderColor = "rgb(150,150,150)";
+            m_inputDiv.m_textColor = "rgb(0,0,0)";
+	    }
+        m_inputDiv.m_location = new FCPoint(0, 0);
+        m_inputDiv.m_size = new FCSize(m_canvasSizeInput.cx, m_canvasSizeInput.cy);
+        m_inputDiv.m_visible = true;
+        m_views_Input.push(m_inputDiv);
+        m_inputDiv.m_views = new Array();
+
+        var textBox = new FCTextBox;
+        textBox.m_location = new FCPoint(50, 50);
+        textBox.m_size = new FCSize(100, 20);
+        textBox.m_font = "12px Arial";
+        textBox.m_parent = m_inputDiv;
+        if (m_inputDiv.m_paint.m_defaultUIStyle == "dark") {
+            textBox.m_backColor = "rgb(0,0,0)";
+            textBox.m_borderColor = "rgb(255,255,255)";
+            textBox.m_textColor = "rgb(255,255,255)";
+        } else if (m_inputDiv.m_paint.m_defaultUIStyle == "light") {
+            textBox.m_backColor = "rgb(255,255,255)";
+            textBox.m_borderColor = "rgb(0,0,0)";
+            textBox.m_textColor = "rgb(0,0,0)";
+	    }
+	    textBox.m_paint = m_paintInput;
+        m_inputDiv.m_views.push(textBox);
+        createInputTextBox(textBox);
+        
+        
+         var comboBox = new FCTextBox;
+        comboBox.m_location = new FCPoint(50, 150);
+        comboBox.m_size = new FCSize(100, 20);
+        comboBox.m_font = "12px Arial";
+        comboBox.m_parent = m_inputDiv;
+        if (m_inputDiv.m_paint.m_defaultUIStyle == "dark") {
+            comboBox.m_backColor = "rgb(0,0,0)";
+            comboBox.m_borderColor = "rgb(255,255,255)";
+            comboBox.m_textColor = "rgb(255,255,255)";
+        } else if (m_inputDiv.m_paint.m_defaultUIStyle == "light") {
+            comboBox.m_backColor = "rgb(255,255,255)";
+            comboBox.m_borderColor = "rgb(0,0,0)";
+            comboBox.m_textColor = "rgb(0,0,0)";
+	    }
+	    comboBox.m_paint = m_paintInput;
+        m_inputDiv.m_views.push(comboBox);
+        createInputComboBox(comboBox);
+
+        var options = new Array();
+        options.push("选项1");
+        options.push("选项2");
+        options.push("选项3");
+        options.push("选项4");
+        options.push("选项5");
+        for(var i = 0; i < options.length; i++){
+            var optionText = options[i];
+            var option = document.createElement('option');
+            option.text = optionText;
+            option.label = optionText;
+            comboBox.m_input.add(option, null);
+        }
+
+	    var image = new FCImage
+        image.m_location = new FCPoint(50, 250);
+        image.m_size = new FCSize(100, 100);
+        image.m_parent = m_inputDiv;
+	    image.m_src = "http://www.jjmfc.com/index_files/go.png";
+        image.m_paint = m_paintInput;
+        m_inputDiv.m_views.push(image);
+        createInputImage(image);
+    }
+    initInput();
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_Input = function(view, mp, buttons, clicks, delta) {
+    };
+
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */  
+    var onMouseDown_Input = function(view, mp, buttons, clicks, delta) {
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_Input = function (view, mp, buttons, clicks, delta) {
+    	if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_Input = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_Input = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_Input = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_Input = function (view, mp, buttons, clicks, delta) {
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseUp_Input = function (view, mp, buttons, clicks, delta) {
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintInput.onPaint = function (view, paint, clipRect) {
+        drawButton(view, paint, clipRect);
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintInput.onPaintBorder = function (view, paint, clipRect) {
+    };
+    
+    addMouseDownEvent(m_canvasInput, onMouseDown_Input);
+    addMouseMoveEvent(m_canvasInput, onMouseMove_Input);
+    addMouseWheelEvent(m_canvasInput, onMouseWheel_Input);
+    addMouseUpEvent(m_canvasInput, onMouseUp_Input, onClick_Input);
+    addTouchBeginEvent(m_canvasInput, onTouchBegin_Input);
+    addTouchMoveEvent(m_canvasInput, onTouchMove_Input);
+    addTouchEndEvent(m_canvasInput, onTouchEnd_Input, onClick_Input);
+
+    /*
+     * 重置大小
+     */ 
+    var resizeAll = function() {
+        m_canvasInput.width = window.innerWidth;
+        m_canvasInput.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasInput.style.width = m_canvasInput.width + 'px';
+            m_canvasInput.style.height = m_canvasInput.height + 'px';
+            m_canvasInput.height = m_canvasInput.height* window.devicePixelRatio;
+            m_canvasInput.width = m_canvasInput.width * window.devicePixelRatio;
+            m_contextInput.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizeInput = new FCSize((m_canvasInput.width / m_ratio / m_paintInput.m_scaleFactorX), (m_canvasInput.height / m_ratio / m_paintInput.m_scaleFactorY));
+        m_inputDiv.m_size = new FCSize(m_canvasSizeInput.cx, m_canvasSizeInput.cy);
+	    invalidate(m_paintInput);
+    };
+    
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+
+    invalidate(m_paintInput);
+   </script>
+</body>
+</html>

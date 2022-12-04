@@ -1,0 +1,506 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat的HTML5框架(开源)</title>
+<style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+</style>
+</head>
+<body>
+    <canvas id="priceCanvas" width="400" height="700" >
+        Your browser does not support canvas element.
+    </canvas>
+ <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_grid.js" ></script>
+    <script type="text/javascript" src="facecat_div.js" ></script>
+    <script type="text/javascript">
+    var m_canvasPrice = document.getElementById("priceCanvas"); //绘图区域
+    m_canvasPrice.width = window.innerWidth;
+    m_canvasPrice.height = window.innerHeight;
+    var m_contextPrice = m_canvasPrice.getContext("2d"); //绘图上下文
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasPrice.style.width = m_canvasPrice.width + 'px';
+        m_canvasPrice.style.height = m_canvasPrice.height + 'px';
+        m_canvasPrice.height = m_canvasPrice.height* window.devicePixelRatio;
+        m_canvasPrice.width = m_canvasPrice.width * window.devicePixelRatio;
+        m_contextPrice.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+    var m_paintPrice = new FCPaint(); //绘图对象
+    m_paintPrice.m_canvas = m_canvasPrice;
+    m_canvasPrice.m_paint = m_paintPrice;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintPrice.m_scaleFactorX = 2.5;
+        m_paintPrice.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSizePrice = new FCSize((m_canvasPrice.width / m_ratio / m_paintPrice.m_scaleFactorX), (m_canvasPrice.height / m_ratio / m_paintPrice.m_scaleFactorY));
+    m_paintPrice.m_defaultUIStyle = "dark";
+    var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintPrice.m_defaultUIStyle = "light";
+    }
+
+    var m_views_Price = new Array(); //视图集合
+    m_canvasPrice.m_views = m_views_Price;
+    
+    // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchEndPrice = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchEndPrice <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchEndPrice = now;
+    }, {
+        passive: false
+    });
+    //创建买卖档
+    var m_priceList = new FCGrid();
+    m_priceList.m_paint = m_paintPrice;
+    if (m_priceList.m_paint.m_defaultUIStyle == "dark") {
+        m_priceList.m_backColor = "rgb(0,0,0)";
+        m_priceList.m_borderColor = "rgb(100,100,100)";
+        m_priceList.m_textColor = "rgb(255,255,255)";
+    } else if (m_priceList.m_paint.m_defaultUIStyle == "light") {
+        m_priceList.m_backColor = "rgb(255,255,255)";
+        m_priceList.m_borderColor = "rgb(150,150,150)";
+        m_priceList.m_textColor = "rgb(0,0,0)";
+	}
+    m_priceList.m_location = new FCPoint(0, 0);
+    m_priceList.m_size = new FCSize(m_canvasSizePrice.cx, m_canvasSizePrice.cy);
+    m_priceList.m_visible = true;
+    m_priceList.m_type = "price";
+
+    m_priceList.m_rowHeight = 50;
+    m_priceList.m_headerHeight = 20;
+    m_views_Price.push(m_priceList);
+    var column1 = new FCGridColumn();
+    column1.m_text = "id";
+    column1.m_frozen = true;
+    column1.m_width = m_priceList.m_size.cx;
+    m_priceList.m_columns.push(column1);
+    if (m_priceList.m_paint.m_defaultUIStyle == "dark") {
+        column1.m_backColor = "rgb(0,0,0)";
+        column1.m_borderColor = "rgb(100,100,100)";
+        column1.m_textColor = "rgb(255,255,255)";
+    } else if (m_priceList.m_paint.m_defaultUIStyle == "light") {
+        column1.m_backColor = "rgb(255,255,255)";
+        column1.m_borderColor = "rgb(150,150,150)";
+        column1.m_textColor = "rgb(0,0,0)";
+	}
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_Price = function(view, mp, buttons, clicks, delta) {
+        
+    };
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseDown_Price = function(view, mp, buttons, clicks, delta) {
+	    if (view.m_type == "price") {
+		    var firstTouch = false, secondTouch = false;
+		    var firstPoint = mp, secondPoint = mp;
+		    if (buttons == 1) {
+			    firstTouch = true;
+		    }
+		    mouseDownGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_Price = function (view, mp, buttons, clicks, delta) {
+        if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+	    if (view.m_type == "price") {
+	        mouseWheelGrid(view, delta);
+		    invalidateView(view, m_paintPrice);
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_Price = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view && view.m_type == "price") {
+		    view.m_allowDragScroll = true;
+		    mouseDownGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_Price = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view && view.m_type == "price") {
+            mouseMoveGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paintPrice);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_Price = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view && view.m_type == "price") {
+		    mouseUpGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paintPrice);
+	    }
+    };
+
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_Price = function (view, mp, buttons, clicks, delta) {
+        if (view.m_type == "price") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+            mouseMoveGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paintPrice);
+        }
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseUp_Price = function (view, mp, buttons, clicks, delta) {
+         if (view.m_type == "price") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+            mouseUpGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paintPrice);
+        }
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintPrice.onPaint = function (view, paint, clipRect) {
+	    if (view.m_type == "price") {
+	        drawDiv(view, paint, clipRect);
+	        drawGrid(view, paint, clipRect);
+	    }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintPrice.onPaintBorder = function (view, paint, clipRect) {
+	    if (view.m_type == "price") {
+		    drawDivBorder(view, paint, clipRect);
+		    drawGridScrollBar(view, paint, clipRect);
+	    }
+    };
+    
+    addMouseDownEvent(m_canvasPrice, onMouseDown_Price);
+    addMouseMoveEvent(m_canvasPrice, onMouseMove_Price);
+    addMouseWheelEvent(m_canvasPrice, onMouseWheel_Price);
+    addMouseUpEvent(m_canvasPrice, onMouseUp_Price, onClick_Price);
+    addTouchBeginEvent(m_canvasPrice, onTouchBegin_Price);
+    addTouchMoveEvent(m_canvasPrice, onTouchMove_Price);
+    addTouchEndEvent(m_canvasPrice, onTouchEnd_Price, onClick_Price);
+
+    /*
+    * 重置大小 
+    */
+    var resizeAll = function() {
+        m_canvasPrice.width = window.innerWidth;
+        m_canvasPrice.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasPrice.style.width = m_canvasPrice.width + 'px';
+            m_canvasPrice.style.height = m_canvasPrice.height + 'px';
+            m_canvasPrice.height = m_canvasPrice.height* window.devicePixelRatio;
+            m_canvasPrice.width = m_canvasPrice.width * window.devicePixelRatio;
+            m_contextPrice.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizePrice = new FCSize((m_canvasPrice.width / m_ratio / m_paintPrice.m_scaleFactorX), (m_canvasPrice.height / m_ratio / m_paintPrice.m_scaleFactorY));
+        m_priceList.m_size = new FCSize(m_canvasSizePrice.cx, m_canvasSizePrice.cy);
+        m_priceList.m_columns[0].m_width = m_priceList.m_size.cx;
+	    invalidate(m_paintPrice);
+    };
+    
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+
+    var m_upColor_Price = "rgb(219,68,83)"; //上涨颜色
+    var m_downColor_Price = "rgb(15,193,118)"; //下跌颜色
+    var m_upColor2_Price = "rgba(219,68,83,0.5)"; //上涨颜色
+    var m_downColor2_Price = "rgba(15,193,118,0.5)"; //下跌颜色
+    var m_textColor_Price = "rgb(255,255,255)"; //下跌颜色
+    var m_maxVolume_Price = 0; //最大成交量
+
+    /*
+    * 绘制单元格
+    * grid:表格
+    * row:行
+    * column:列
+    * cell:单元格
+    * paint:绘图对象
+    * left:左侧坐标
+    * top:上方坐标
+    * right:右侧坐标
+    * bottom:下方坐标
+    */
+    m_paintPrice.onPaintGridCell = function (grid, row, column, cell, paint, left, top, right, bottom) {
+        var width = right - left, height = bottom - top;
+        var baseUpper = cell.m_data.base.toUpperCase();
+        var font1 = "16px Arial";
+        var font2 = "14px Arial";
+        var font3 = "12px Arial";
+        var tSize = paint.textSize(baseUpper, font1);
+        var quoteUpper = " / " + cell.m_data.quote.toUpperCase();
+        var strVolume = cell.m_data.volume.toFixed(6);
+        var strPrice = cell.m_data.price.toFixed(6);
+        var tSize2 = paint.textSize(strVolume, font3);
+        var tSize3 = paint.textSize(strPrice, font2);
+        var strPrice2 = "¥" + (cell.m_data.price * 7.24).toFixed(6);
+        var diffRange = ((cell.m_data.price - cell.m_firstPrice) / cell.m_data.price * 100).toFixed(2) + "%";
+         if (grid.m_paint.m_defaultUIStyle == "dark") {
+           paint.drawText(baseUpper, "rgb(255,255,255)", font1, left + 5, top + height / 2 - tSize2.cy);
+            paint.drawText(quoteUpper, "rgb(200,200,200)", font3, left + 5 + tSize.cx, top + height / 2 - tSize2.cy);
+            paint.drawText(strVolume, "rgb(200,200,200)", font3, left + 5, top + height / 2 + tSize2.cy);
+        } else if (grid.m_paint.m_defaultUIStyle == "light") {
+            paint.drawText(baseUpper, "rgb(0,0,0)", font1, left + 5, top + height / 2 - tSize2.cy);
+            paint.drawText(quoteUpper, "rgb(50,50,50)", font3, left + 5 + tSize.cx, top + height / 2 - tSize2.cy);
+            paint.drawText(strVolume, "rgb(50,50,50)", font3, left + 5, top + height / 2 + tSize2.cy);
+	    }
+        
+
+        var tSize5 = paint.textSize("100000.00%", font1);
+        var colRect = new FCRect(left + width * 0.7 + 5, top + height / 2 - tSize5.cy, left + width * 0.7 + 5 + tSize5.cx, top + height / 2 + tSize5.cy);
+        var color = m_downColor_Price;
+        if(cell.m_data.price >= cell.m_firstPrice){
+            color = m_upColor_Price;
+        }
+        paint.drawText(strPrice, color, font2, left + width * 0.4 + 5, top + height / 2 - tSize3.cy);
+        paint.drawText(strPrice2, color, font2, left + width * 0.4 + 5, top + height / 2 + tSize3.cy);
+        paint.fillRect(color, colRect.left, colRect.top, colRect.right, colRect.bottom);
+        var tSize4 = paint.textSize(diffRange, font1);
+        if (grid.m_paint.m_defaultUIStyle == "dark") {
+            paint.drawText(diffRange, "rgb(255,255,255)", font1, left + width * 0.7 + 5 + tSize5.cx / 2 - tSize4.cx / 2, top + height / 2);
+        }else if (grid.m_paint.m_defaultUIStyle == "light") {
+            paint.drawText(diffRange, "rgb(0,0,0)", font1, left + width * 0.7 + 5 + tSize5.cx / 2 - tSize4.cx / 2, top + height / 2);
+        }
+    };
+    
+    /*
+    * 绘制列
+    * grid:表格
+    * column:列
+    * paint:绘图对象
+    * left:左侧坐标
+    * top:上方坐标
+    * right:右侧坐标
+    * bottom:下方坐标
+    */
+    m_paintPrice.onPaintGridColumn = function (grid, column, paint, left, top, right, bottom) {
+         var width = right - left, height = bottom - top;
+         var font2 = "14px Arial";
+         var tSize = paint.textSize("市场 / 成交额", font2);
+        
+         if (grid.m_paint.m_defaultUIStyle == "dark") {
+          paint.fillRect("rgb(0,0,0)", left, top, right, bottom);
+             paint.drawText("市场 / 成交额", "rgb(200,200,200)", font2, left + 5, top + height / 2);
+             paint.drawText("最新价", "rgb(200,200,200)", font2, left + width * 0.4 + 5, top + height / 2);
+             paint.drawText("24h涨跌", "rgb(200,200,200)", font2, left + width * 0.7 + 5, top + height / 2);
+         }else if (grid.m_paint.m_defaultUIStyle == "light") {
+          paint.fillRect("rgb(255,255,255)", left, top, right, bottom);
+            paint.drawText("市场 / 成交额", "rgb(50,50,50)", font2, left + 5, top + height / 2);
+             paint.drawText("最新价", "rgb(50,50,50)", font2, left + width * 0.4 + 5, top + height / 2);
+             paint.drawText("24h涨跌", "rgb(50,50,50)", font2, left + width * 0.7 + 5, top + height / 2);
+         }
+    };
+    
+    /*
+    * 表格的鼠标点击方法
+    * grid: 表格
+    * row: 行
+    * column: 列
+    * cell: 单元格
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    m_paintPrice.onClickGridCell = function(grid, row, column, cell, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+    
+    /*
+    * 表格的列点击方法
+    * grid: 表格
+    * column: 列
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    m_paintPrice.onClickGridColumn = function(grid, gridColumn, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+    
+    var m_allowPaint_Price = false;
+
+    /*
+    * 检查绘图
+    */
+    var checkPricePaint = function(){
+        if(m_allowPaint_Price){
+            m_allowPaint_Price = false;
+            invalidateView(m_priceList, m_paintPrice);
+        }
+    };
+    
+    setInterval(checkPricePaint, 300);
+
+    /*
+     * 查询数据
+     */ 
+    var queryPriceData = function () {
+	    var ws = new WebSocket("wss://ws.coincap.io/trades/binance");
+	    ws.onopen = function () {
+	    };
+	    ws.onmessage = function (e) {
+		    var json = eval('(' + e.data + ')');
+		    var key = json.base + "," + json.quote;
+		    var hasData = false;
+		    var rowsSize = m_priceList.m_rows.length;
+		    for (var i = 0; i < rowsSize; i++) {
+			    var thisCell = m_priceList.m_rows[i].m_cells[0];
+			    if(thisCell.m_value == key){
+			        hasData = true;
+			        thisCell.m_data = json;
+			        thisCell.m_update = 1;
+			        break;
+			    }
+			}
+	        if(!hasData){
+	            var row = new FCGridRow;
+			    m_priceList.m_rows.push(row);
+			    var cell = new FCGridCell();
+			    cell.m_value = key;
+			    cell.m_font = "16px Arial";
+			    cell.m_colSpan = 1;
+			    cell.m_rowSpan = 1;
+			    cell.m_data = json;
+			    cell.m_firstPrice = json.price;
+			    cell.m_update = 0;
+			    row.m_cells.push(cell);
+	        }   
+	        m_allowPaint_Price = true;
+	    };
+	    ws.onclose = function (e) {
+		    console.log("close");
+	    };
+	    ws.onerror = function (e) {
+		    console.log(error);
+	    };
+    };
+
+    invalidate(m_paintPrice);
+    queryPriceData();
+    </script>
+</body>
+</html>

@@ -1,0 +1,802 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat</title>
+<style>
+			html,
+			body {
+				width: 100%;
+				height: 100%
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+
+</style>
+</head>
+<body> 
+    <canvas id="mycanvas" width="1000" height="700">
+        Your browser does not support canvas element
+    </canvas>
+    <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_grid.js" ></script>
+    <script type="text/javascript" src="facecat_chart.js" ></script>
+    <script type="text/javascript" src="facecat_date.js" ></script>
+    <script type="text/javascript" src="facecat_tree.js" ></script>
+    <script type="text/javascript" src="facecat_tab.js" ></script>
+    <script type="text/javascript" src="facecat_div.js" ></script>
+<script type="text/javascript" src="facecat_split.js" ></script>
+<script type="text/javascript" src="facecat_layout.js" ></script>
+<script type="text/javascript" src="facecat_btn.js" ></script>
+<script type="text/javascript" src="facecat_input.js" ></script>
+    <script type="text/javascript">
+    var m_canvas = document.getElementById("mycanvas"); //绘图区域
+    var m_context = m_canvas.getContext("2d"); //绘图上下文
+    m_canvas.width = window.innerWidth;
+   m_canvas.height = window.innerHeight;
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvas.style.width = m_canvas.width + 'px';
+        m_canvas.style.height = m_canvas.height + 'px';
+        m_canvas.height = m_canvas.height* window.devicePixelRatio;
+        m_canvas.width = m_canvas.width * window.devicePixelRatio;
+        m_context.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+
+    var m_paint = new FCPaint(); //绘图对象
+    m_paint.m_canvas = m_canvas; 
+    m_canvas.m_paint = m_paint;
+     m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paint.m_scaleFactorX = 2.5;
+        m_paint.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSize = new FCSize((m_canvas.width / m_ratio / m_paint.m_scaleFactorX), (m_canvas.height / m_ratio / m_paint.m_scaleFactorY));
+    m_paint.m_defaultUIStyle = "dark";
+       var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paint.m_defaultUIStyle = "light";
+    }
+    var m_views = new Array(); //视图集合
+    m_canvas.m_views = m_views;
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onClick = function (view, mp, buttons, clicks, delta) {
+        if(view.m_type == "tabbutton"){
+            var tabView = view.m_parent;
+            var oldPage = null;
+            for(var i = 0; i < tabView.m_tabPages.length; i++){
+                if(tabView.m_tabPages[i].m_visible){
+                    oldPage = tabView.m_tabPages[i];
+                    break;
+                }
+            }
+            for(var i = 0; i < tabView.m_tabPages.length; i++){
+                if(tabView.m_tabPages[i].m_headerButton == view){
+                    selectTabPage(tabView, tabView.m_tabPages[i]);
+                    if(oldPage){
+                        startTabPageAnimation(tabView.m_tabPages[i], oldPage);
+                    }
+                    break;
+                }
+            }
+            invalidateView(tabView, m_paint);
+        }
+        else if(view.m_type == "radiobutton"){
+            clickRadioButton(view, mp);
+            invalidate(view.m_paint);
+        }
+        else if(view.m_type == "checkbox"){
+            clickCheckBox(view, mp);
+            invalidateView(view.m_parent, view.m_paint);
+        }
+    };
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseDown = function(view, mp, buttons, clicks, delta) {
+        var firstTouch = false, secondTouch = false;
+        var firstPoint = mp, secondPoint = mp;
+        if (buttons == 1) {
+            firstTouch = true;
+        }
+	    if (view.m_type == "tree") {
+		    mouseDownTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+         if (view.m_type == "grid") {
+		    mouseDownGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+        if (view.m_type == "div" || view.m_type == "layout") {
+		    mouseDownDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "calendar") {
+	        clickCalendar(mp, view);
+        }
+        if (view.m_type == "button") {
+            invalidateView(view, m_paint);
+        }
+    };
+
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove = function(view, mp, buttons, clicks, delta) {
+       if (view.m_type == "tree") {
+            mouseMoveTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	        invalidateView(view, m_paint);
+        }
+        if (view.m_type == "grid") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+                firstTouch = true;
+            }
+            mouseMoveGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paint);
+        }
+        if (view.m_type == "div" || view.m_type == "layout") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+	        mouseMoveDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paint);
+        }  
+        if(view.m_type == "chart"){
+		    var firstTouch = false, secondTouch = false;
+		    var firstPoint = mp, secondPoint = mp;
+		    if(buttons == 1){
+		        firstTouch = true;
+		    }
+		    mouseMoveChart(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	        invalidateView(m_chart, m_paint);
+        }
+        if (view.m_type == "button") {
+            invalidateView(view, m_paint);
+        }
+    };
+    
+
+    
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel = function(view, mp, buttons, clicks, delta) {
+         if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+        if (view.m_type == "tree") {
+	        mouseWheelTree(view, delta);
+	        invalidateView(view, m_paint);
+	    }
+	    else if (view.m_type == "grid") {
+		    mouseWheelGrid(view, delta);
+	        invalidateView(view, m_paint);
+	    }
+	    else if (view.m_type == "div" || view.m_type == "layout") {
+	        mouseWheelDiv(view, delta);
+		    invalidateView(view, m_paint);
+	    }
+	    else if (view.m_type == "chart") {
+            if(delta > 0){
+                zoomOutChart(view);
+            }else if(delta < 0){
+                zoomInChart(view);
+            }
+            invalidateView(view, m_paint);
+        }
+    };
+    
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseUp = function(view, mp, buttons, clicks, delta) {
+        var firstTouch = false, secondTouch = false;
+        var firstPoint = mp, secondPoint = mp;
+        if (buttons == 1) {
+            firstTouch = true;
+        }
+	    if (view.m_type == "tree") {
+		    mouseUpTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+        if (view.m_type == "grid") {
+            mouseUpGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+        if (view.m_type == "div" || view.m_type == "layout") {
+	        mouseUpDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+        if (view.m_type == "chart") {
+            m_firstTouchIndexCache_Chart = -1;
+            m_secondTouchIndexCache_Chart = -1;
+        }
+        if (view.m_type == "button") {
+            invalidateView(view, m_paint);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "tree") {
+		    mouseDownTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "grid") {
+		    mouseDownGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "div" || view.m_type == "layout") {
+		    mouseDownDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "calendar") {
+	        clickCalendar(m_touchFirstPoint, view);
+        }
+        if (view.m_type == "button") {
+            invalidateView(view, m_paint);
+        }
+    };
+
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "tree") {
+            mouseMoveTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paint);
+        }
+        if (view.m_type == "grid") {
+            mouseMoveGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paint);
+        }
+        if (view.m_type == "div" || view.m_type == "layout") {
+            mouseMoveDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paint);
+        }
+        if (view.m_type == "chart") {
+            mouseMoveChart(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paint);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "tree") {
+		    mouseUpTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "grid") {
+		    mouseUpGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "div" || view.m_type == "layout") {
+		    mouseUpDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "chart") {
+		    m_firstTouchIndexCache_Chart = -1;
+            m_secondTouchIndexCache_Chart = -1;
+        }
+        if (view.m_type == "button") {
+            invalidateView(view, m_paint);
+        }
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paint.onPaint = function (view, paint, clipRect) {
+        if(view.m_type == "chart"){
+	        drawChart(view, paint, clipRect);
+	    }
+	    else if(view.m_type == "grid"){
+	        drawDiv(view, paint, clipRect);
+	       drawGrid(view, paint, clipRect);
+	    }
+	    else if (view.m_type == "tree") {
+	        drawDiv(view, paint, clipRect);
+		    drawTree(view, paint, clipRect);
+	    }
+	    else if (view.m_type == "calendar") {
+		    drawCalendar(view, paint);
+	    }
+	    else if (view.m_type == "label") {
+		    if(view.m_textColor){
+                var tSize = paint.textSize(view.m_text, view.m_font);
+                paint.drawText(view.m_text, view.m_textColor, view.m_font, 0, view.m_size.cy / 2 + 1);
+            }
+	    }
+	    else if (view.m_type == "radiobutton") {
+	        drawRadioButton(view, paint, clipRect);
+	    }
+	    else if (view.m_type == "checkbox") {
+	        drawCheckBox(view, paint, clipRect);
+	    }
+	    else{
+	        drawButton(view, paint, clipRect);
+        }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paint.onPaintBorder = function (view, paint, clipRect) {
+        if (view.m_type == "grid") {
+		    drawDivBorder(view, paint, clipRect);
+		    drawGridScrollBar(view, paint, clipRect);
+	    }
+	    else if (view.m_type == "tree"){
+            drawDivBorder(view, paint, clipRect);
+		    drawTreeScrollBar(view, paint, clipRect);
+	    }
+	    else if (view.m_type == "div") {
+	        drawDivBorder(view, paint, clipRect);
+		    drawDivScrollBar(view, paint, clipRect);
+	    }
+	    else if(view.m_type == "tabview"){
+            drawTabViewBorder(view, paint, clipRect);
+        }
+        else if(view.m_type == "label"){
+        }
+         else if(view.m_type == "radiobutton"){
+        }
+         else if(view.m_type == "checkbox"){
+        }
+    };
+    
+    /*
+     * 重置大小
+     */ 
+    var resizeAll = function() {
+        try{
+            m_canvas.width = window.innerWidth;
+            m_canvas.height = window.innerHeight;
+            //缩放高清模式
+            if (window.devicePixelRatio) {
+                m_canvas.style.width = m_canvas.width + 'px';
+                m_canvas.style.height = m_canvas.height + 'px';
+                m_canvas.height = m_canvas.height* window.devicePixelRatio;
+                m_canvas.width = m_canvas.width * window.devicePixelRatio;
+                m_context.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+            m_canvasSize = new FCSize((m_canvas.width / m_ratio / m_paint.m_scaleFactorX), (m_canvas.height / m_ratio / m_paint.m_scaleFactorY));
+            for(var i = 0; i < m_views.length; i++){
+                m_views[i].m_size = new FCSize(m_canvasSize.cx, m_canvasSize.cy);
+            }
+            updateView(m_views);
+        }catch(err){
+            //alert(err);
+        }
+        invalidate(m_paint);
+    };
+    
+    
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+
+    addMouseDownEvent(m_canvas, onMouseDown);
+    addMouseMoveEvent(m_canvas, onMouseMove);
+    addMouseWheelEvent(m_canvas, onMouseWheel);
+    addMouseUpEvent(m_canvas, onMouseUp, onClick);
+    addTouchBeginEvent(m_canvas, onTouchBegin);
+    addTouchMoveEvent(m_canvas, onTouchMove);
+    addTouchEndEvent(m_canvas, onTouchEnd, onClick);
+    
+    /*
+    * 更新悬浮状态
+    * views:视图集合
+    */
+    var updateView = function(views){
+        for(var i = 0; i < views.length; i++){
+            var view = views[i];
+            if(view.m_dock == "fill"){
+                if(view.m_parent && view.m_parent.m_type != "split"){
+                    view.m_location = new FCPoint(0, 0);
+                    view.m_size = new FCSize(view.m_parent.m_size.cx, view.m_parent.m_size.cy);
+                }
+            }
+            if(view.m_type == "split"){
+                resetSplitLayoutDiv(view);
+            }else if(view.m_type == "tabview"){
+                updateTabLayout(view);
+            }else if(view.m_type == "layout"){
+                resetLayoutDiv(view);
+            }else if(view.m_type == "calendar"){
+                updateCalendar(view);
+            }
+            if(view.m_views){
+                updateView(view.m_views);
+            }
+        }
+    };
+
+    /*
+    * 设置属性
+    * view:视图
+    * node:xml节点
+    */
+    var setAttribute = function(view, node){
+        if(view.m_paint){
+            if(view.m_paint.m_defaultUIStyle == "dark"){
+                view.m_backColor = "rgb(0,0,0)";
+                view.m_borderColor = "rgb(100,100,100)";
+                view.m_textColor = "rgb(255,255,255)";
+            }else if(view.m_paint.m_defaultUIStyle == "light"){
+                view.m_backColor = "rgb(255,255,255)";
+                view.m_borderColor = "rgb(150,150,150)";
+                view.m_textColor = "rgb(0,0,0)";
+            }
+        }
+        if(!view.m_location){
+            view.m_location = new FCPoint(0, 0);
+        }
+        if(!view.m_size){
+            view.m_size = new FCSize(100, 30);
+        }
+       for(var i = 0; i < node.attributes.length; i++){
+         var name = node.attributes[i].nodeName.toLowerCase();
+         var value = node.attributes[i].nodeValue;
+         if(name && value){
+            if(name == "location"){
+                view.m_location = new FCPoint(parseInt(value.split(',')[0]), parseInt(value.split(',')[1]));
+            }else if(name == "size"){
+                view.m_size = new FCSize(parseInt(value.split(',')[0]), parseInt(value.split(',')[1]));
+            }else if(name == "text"){
+                view.m_text = value;
+            }else if(name == "backcolor"){
+                var lowerStr = value.toLowerCase();
+                if(lowerStr.indexOf("rgb") == 0){
+                    view.m_backColor = value;
+                }
+            }else if(name == "bordercolor"){
+                var lowerStr = value.toLowerCase();
+                if(lowerStr.indexOf("rgb") == 0){
+                    view.m_borderColor = value;
+                }
+            }else if(name == "textcolor"){
+                var lowerStr = value.toLowerCase();
+                if(lowerStr.indexOf("rgb") == 0){
+                    view.m_textColor = value;
+                }
+            }else if(name == "layoutstyle"){
+                view.m_layoutStyle = value;
+            }else if(name == "dock"){
+                view.m_dock = value;
+            }else if(name == "font"){
+                var family = value.split(',')[0];
+                if(family == "Default"){
+                    family = "Arial";
+                }
+                view.m_font = value.split(',')[1] + "px " + family;
+            }else if(name == "headerheight"){
+                view.m_headerHeight = parseFloat(value);
+            }else if(name == "splitmode"){
+                view.m_splitMode = value;
+            }
+            else if(name == "autowrap"){
+                view.m_autoWrap = value.toLowerCase() == "true";
+            }else if(name == "name"){
+                view.m_name = value;
+            }else if(name == "showvscrollbar"){
+                view.m_showVScrollBar = value.toLowerCase() == "true";
+            }else if(name == "showhscrollbar"){
+                view.m_showHScrollBar = value.toLowerCase() == "true";
+            }else if(name == "visible"){
+                view.m_visible = value.toLowerCase() == "true";
+            }else if(name == "displayoffset"){
+                view.m_visible = value.toLowerCase() == "true";
+            }else if(name == "checked"){
+                view.m_checked = value.toLowerCase() == "true";
+            }else if(name == "buttonsize"){
+                view.m_buttonSize = value.toLowerCase() == "true";
+            }else if(name == "topmost"){
+                view.m_topMost = value.toLowerCase() == "true";
+            }else if(name == "selectedindex"){
+                view.m_selectedIndex = parseInt(value);
+            }else if(name == "src"){
+                view.m_src = value;
+            }else if(name == "backimage"){
+                view.m_backImage = value;
+            }
+         }
+       }
+    };
+
+    /*
+    * 读取Xml
+    * paint 绘图对象
+    * node节点
+    * parent 父视图
+    */
+    var readXmlNode = function(paint, node, parent){
+        var subNodes = node.childNodes;       
+        for (var i = 0; i < subNodes.length; i++){ 
+            var child = subNodes[i];
+            if (child.nodeType == 1){
+                var view = null;
+                var type = "";
+                var nodeName = child.nodeName.toLowerCase();
+                if(nodeName == "div"){
+                    type = child.getAttribute("type");
+                    if(type == "splitlayout"){
+                        view = new FCSplitLayoutDiv();
+                    }
+                    else if(type == "layout"){
+                        view = new FCLayoutDiv();
+                    }
+                    else if(type == "tab"){
+                        view = new FCTabView();
+                    }
+                    else if(type == "tabpage"){
+                        view = new FCTabPage();
+                    }
+                    else{
+                        view = new FCDiv();
+                    }
+                }
+                else if(nodeName == "select"){
+                    view = new FCComboBox();
+                }
+                else if(nodeName == "input"){
+                    type = child.getAttribute("type");
+                    if(type == "radio"){
+                        view = new FCRadioButton();
+                    }
+                    else if(type == "text"){
+                        view = new FCTextBox();
+                    }
+                    else if(type == "checkbox"){
+                        view = new FCCheckBox();
+                    }else if(type == "range"){
+                        view = new FCSpin();
+                    }else if(type == "datetime"){
+                        view = new FCDatePicker();
+                    }else{
+                        view = new FCView();
+                    }
+                }
+                else if(nodeName == "chart"){
+                    view = new FCChart();
+                }
+                else if(nodeName == "img"){
+                    view = new FCImage();
+                }
+                else if(nodeName == "calendar"){
+                    view = new FCCalendar();
+                }
+                else if(nodeName == "table"){
+                    view = new FCGrid();
+                }else if(nodeName == "tree"){
+                    view = new FCTree();
+                }
+                else{
+                    view = new FCView();
+                }
+                view.m_views = new Array();
+                view.m_paint = paint;
+                view.m_parent = parent;
+                setAttribute(view, child);
+                if(nodeName == "select"){
+                    createInputComboBox(view);
+                }
+                else if(type == "text"){
+                    createInputTextBox(view);
+                }
+                else if(type == "range"){
+                    createInputTextBox(view);
+                }else if(type == "datetime"){
+                    createInputDatePicker(view);
+                }
+                if(nodeName == "label"){
+                   view.m_type = "label";
+                }
+                else if(nodeName == "calendar"){
+                    initCalendar(view);
+                    view.m_selectedDay = getYear(view.m_years, 2022).m_months.get(10).m_days.get(1);
+                    updateCalendar(view);
+                }
+                if(view){
+                    if(type == "tabpage"){
+                        var tabButton = new FCView();
+                        tabButton.m_type = "tabbutton";
+                        var atrHeaderSize = child.getAttribute("headersize");
+                        if(atrHeaderSize){
+                            tabButton.m_size = new FCSize(parseInt(atrHeaderSize.split(',')[0]), parseInt(atrHeaderSize.split(',')[1]));
+                        }else{
+                            tabButton.m_size = new FCSize(100, 20);
+                        }
+                        if(view.m_paint.m_defaultUIStyle == "dark"){
+                            tabButton.m_backColor = "rgb(0,0,0)";
+                            tabButton.m_borderColor = "rgb(100,100,100)";
+                            tabButton.m_textColor = "rgb(255,255,255)";
+                        }else if(view.m_paint.m_defaultUIStyle == "light"){
+                            tabButton.m_backColor = "rgb(255,255,255)";
+                            tabButton.m_borderColor = "rgb(150,150,150)";
+                            tabButton.m_textColor = "rgb(0,0,0)";
+                        }
+                        tabButton.m_text = view.m_text;
+                        addTabPage(view.m_parent, view, tabButton);
+                    }else{
+                        if(parent){
+                            if(!parent.m_views){
+                                parent.m_views = new Array();
+                            }
+                            parent.m_views.push(view);
+                        }else{
+                            paint.m_canvas.m_views.push(view);
+                        }
+                    }
+                    if(type == "splitlayout"){
+                         var atrDatum = child.getAttribute("datumsize");
+                        if(atrDatum){
+                            view.m_size = new FCSize(parseInt(atrDatum.split(',')[0]), parseInt(atrDatum.split(',')[1]));
+                        }
+                        var splitter = new FCView();
+                        if(view.m_paint.m_defaultUIStyle == "dark"){
+                            splitter.m_backColor = "rgb(100,100,100)";
+                        }else if(view.m_paint.m_defaultUIStyle == "light"){
+                            splitter.m_backColor = "rgb(150,150,150)";
+                        }
+                        view.m_views.push(splitter);
+                        view.m_splitter = splitter;
+                        var splitterposition = child.attributes["splitterposition"].nodeValue;
+                        var splitStr = splitterposition.split(',');
+                        if(splitStr.length >= 4){
+                            var splitRect = new FCRect(parseFloat(splitStr[0]), parseFloat(splitStr[1]), parseFloat(splitStr[2]), parseFloat(splitStr[3]));
+                            splitter.m_location = new FCPoint(splitRect.left, splitRect.top);
+                            splitter.m_size = new FCSize(splitRect.right - splitRect.left, splitRect.bottom - splitRect.top);
+                        }else{
+                            var sSize = parseFloat(splitStr[1]);
+                            var sPosition = parseFloat(splitStr[0]);
+                            if(view.m_layoutStyle == "lefttoright" || view.m_layoutStyle == "righttoleft"){
+                                splitter.m_location = new FCPoint(sPosition, 0);
+                                splitter.m_size = new FCSize(sSize, view.m_size.cy);
+                            }else{
+                                splitter.m_location = new FCPoint(0, sPosition);
+                                splitter.m_size = new FCSize(view.m_size.cx, sSize);
+                            }
+                        }
+                        readXmlNode(paint, child, view);
+                        view.m_firstView = view.m_views[1];
+                        view.m_secondView = view.m_views[2];
+                        view.m_oldSize = view.m_size;
+                        resetSplitLayoutDiv(view);
+                        
+                    }else if(type == "tab"){
+                        readXmlNode(paint, child, view);
+                        if(view.m_tabPages.length > 0){
+                            view.m_tabPages[0].m_visible = true;
+                        }
+                    }else if(nodeName == "table"){
+                        var tSubNodes = child.childNodes;       
+                        for (var n = 0; n < tSubNodes.length; n++){ 
+                            var tChild = tSubNodes[n];
+                            if (tChild.nodeType == 1){
+                                if(tChild.nodeName == "tr"){
+                                    var tsunNodes = tChild.childNodes;
+                                    for (var j = 0; j < tsunNodes.length; j++){
+                                        var sunNodeName = tsunNodes[j].nodeName.toLowerCase();
+                                        if(sunNodeName.toLowerCase() == "th"){
+                                            var gridColumn = new FCGridColumn;
+                                            gridColumn.m_width = 100;
+                                            gridColumn.m_text = tsunNodes[j].attributes["text"].nodeValue;
+                                            view.m_columns.push(gridColumn);
+                                            if(view.m_paint.m_defaultUIStyle == "light"){
+                                                gridColumn.m_backColor = "rgb(230,230,230)";
+                                                gridColumn.m_borderColor = "rgb(150,150,150)";
+                                                gridColumn.m_textColor = "rgb(0,0,0)";
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if(nodeName == "calendar"){
+                        initCalendar(view);
+                        view.m_selectedDay = getYear(view.m_years, 2022).m_months.get(10).m_days.get(1);
+                        updateCalendar(view);
+                    }
+                    else if(nodeName == "select"){
+                        var tSubNodes = child.childNodes;       
+                        for (var n = 0; n < tSubNodes.length; n++){ 
+                            var tChild = tSubNodes[n];
+                            if (tChild.nodeType == 1){
+                                if(tChild.nodeName == "option"){
+                                    var optionText = tChild.getAttribute("text");
+                                    var option = document.createElement('option');
+                                    option.text = optionText;
+                                    option.label = optionText;
+                                    view.m_input.add(option, null);
+                                }
+                            }
+                        }
+                    }
+                    else{
+                        readXmlNode(paint, child, view);
+                    }
+                }
+            }
+        }
+    };
+    var xml = "";
+    loadFaceCat(m_paint, xml, m_canvasSize);
+    </script>
+</body>
+</html>

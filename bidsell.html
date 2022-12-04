@@ -1,0 +1,462 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat的HTML5框架(开源)</title>
+<style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+</style>
+</head>
+<body>
+    <canvas id="bidSellCanvas" width="400" height="700" >
+        Your browser does not support canvas element.
+    </canvas>
+ <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_grid.js" ></script>
+    <script type="text/javascript" src="facecat_div.js" ></script>
+    <script type="text/javascript">
+    var m_canvasBidSell = document.getElementById("bidSellCanvas"); //绘图区域
+    var m_contextBidSell = m_canvasBidSell.getContext("2d"); //绘图上下文
+    m_canvasBidSell.width = window.innerWidth;
+    m_canvasBidSell.height = window.innerHeight;
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasBidSell.style.width = m_canvasBidSell.width + 'px';
+        m_canvasBidSell.style.height = m_canvasBidSell.height + 'px';
+        m_canvasBidSell.height = m_canvasBidSell.height* window.devicePixelRatio;
+        m_canvasBidSell.width = m_canvasBidSell.width * window.devicePixelRatio;
+        m_contextBidSell.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+    var m_paintBidSell = new FCPaint(); //绘图对象
+    m_paintBidSell.m_defaultUIStyle = "dark";
+   var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintBidSell.m_defaultUIStyle = "light";
+    }
+    m_paintBidSell.m_canvas = m_canvasBidSell;
+    m_canvasBidSell.m_paint = m_paintBidSell;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintBidSell.m_scaleFactorX = 2.5;
+        m_paintBidSell.m_scaleFactorY = 2.5;
+    }
+        //实际绘图大小
+    var m_canvasSizeBidSell = new FCSize((m_canvasBidSell.width / m_ratio / m_paintBidSell.m_scaleFactorX), (m_canvasBidSell.height / m_ratio / m_paintBidSell.m_scaleFactorY));
+
+    var m_views_BidSell = new Array(); //视图集合
+    m_canvasBidSell.m_views = m_views_BidSell;
+    
+    // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchEndBidSell = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchEndBidSell <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchEndBidSell = now;
+    }, {
+        passive: false
+    });
+
+    /*
+     * 单元格
+     */
+    function FCBidSellCellEx() {
+	    this.m_price = 0; //价格
+	    this.m_direction = "buy"; //方向
+	    this.m_vol = 0; //数量
+    };
+
+    FCBidSellCellEx.prototype = FCGridCell;
+
+    //是否移动端
+    var m_upColor_BidSell = "rgb(219,68,83)"; //上涨颜色
+    var m_downColor_BidSell = "rgb(15,193,118)"; //下跌颜色
+    var m_upColor2_BidSell = "rgba(219,68,83,0.5)"; //上涨颜色
+    var m_downColor2_BidSell = "rgba(15,193,118,0.5)"; //下跌颜色
+    var m_textColor_BidSell = "rgb(255,255,255)"; //下跌颜色
+    var m_maxVolume_BidSell = 0; //最大成交量
+    //创建买卖档
+    var m_bidSell = new FCGrid();
+    m_bidSell.m_paint = m_paintBidSell;
+    if (m_bidSell.m_paint.m_defaultUIStyle == "dark") {
+        m_bidSell.m_backColor = "rgb(0,0,0)";
+        m_bidSell.m_borderColor = "rgb(100,100,100)";
+        m_bidSell.m_textColor = "rgb(255,255,255)";
+    } else if (m_bidSell.m_paint.m_defaultUIStyle == "light") {
+        m_bidSell.m_backColor = "rgb(255,255,255)";
+        m_bidSell.m_borderColor = "rgb(150,150,150)";
+        m_bidSell.m_textColor = "rgb(0,0,0)";
+        m_textColor_BidSell = "rgb(0,0,0)";
+	}
+    m_bidSell.m_location = new FCPoint(0, 0);
+    m_bidSell.m_size = new FCSize(m_canvasSizeBidSell.cx, m_canvasSizeBidSell.cy);
+    m_bidSell.m_visible = true;
+    m_bidSell.m_headerHeight = 0;
+    m_bidSell.m_type = "bidsell";
+    m_views_BidSell.push(m_bidSell);
+    var column1 = new FCGridColumn();
+    column1.m_text = "id";
+    column1.m_frozen = true;
+    column1.m_width = m_bidSell.m_size.cx;
+    m_bidSell.m_columns.push(column1);
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_BidSell = function(view, mp, buttons, clicks, delta) {
+        
+    };
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseDown_BidSell = function(view, mp, buttons, clicks, delta) {
+	    if (view.m_type == "bidsell") {
+		    var firstTouch = false, secondTouch = false;
+		    var firstPoint = mp, secondPoint = mp;
+		    if (buttons == 1) {
+			    firstTouch = true;
+		    }
+		    mouseDownGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_BidSell = function (view, mp, buttons, clicks, delta) {
+       if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+	    if (view.m_type == "bidsell") {
+	        mouseWheelGrid(view, delta);
+		    invalidateView(view, m_paintBidSell);
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_BidSell = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "bidsell") {
+		    view.m_allowDragScroll = true;
+		    mouseDownGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_BidSell = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "bidsell") {
+            mouseMoveGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paintBidSell);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_BidSell = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "bidsell") {
+		    mouseUpGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+    };
+
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_BidSell = function (view, mp, buttons, clicks, delta) {
+        if (view.m_type == "bidsell") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+            mouseMoveGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paintBidSell);
+        }
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseUp_BidSell = function (view, mp, buttons, clicks, delta) {
+        if (view.m_type == "bidsell") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+            mouseUpGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintBidSell.onPaint = function (view, paint, clipRect) {
+	    if (view.m_type == "bidsell") {
+	        drawDiv(view, paint, clipRect);
+	        drawGrid(view, paint, clipRect);
+	    }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintBidSell.onPaintBorder = function (view, paint, clipRect) {
+	    if (view.m_type == "bidsell") {
+		    drawDivBorder(view, paint, clipRect);
+		    drawGridScrollBar(view, paint, clipRect);
+	    }
+    };
+    
+    addMouseDownEvent(m_canvasBidSell, onMouseDown_BidSell);
+    addMouseMoveEvent(m_canvasBidSell, onMouseMove_BidSell);
+    addMouseWheelEvent(m_canvasBidSell, onMouseWheel_BidSell);
+    addMouseUpEvent(m_canvasBidSell, onMouseUp_BidSell, onClick_BidSell);
+    addTouchBeginEvent(m_canvasBidSell, onTouchBegin_BidSell);
+    addTouchMoveEvent(m_canvasBidSell, onTouchMove_BidSell);
+    addTouchEndEvent(m_canvasBidSell, onTouchEnd_BidSell, onClick_BidSell);
+
+    /*
+    * 重置大小 
+    */
+    var resizeAll = function() {
+        m_canvasBidSell.width = window.innerWidth;
+        m_canvasBidSell.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasBidSell.style.width = m_canvasBidSell.width + 'px';
+            m_canvasBidSell.style.height = m_canvasBidSell.height + 'px';
+            m_canvasBidSell.height = m_canvasBidSell.height* window.devicePixelRatio;
+            m_canvasBidSell.width = m_canvasBidSell.width * window.devicePixelRatio;
+            m_contextBidSell.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizePy = new FCSize((m_canvasBidSell.width / m_ratio / m_paintBidSell.m_scaleFactorX), (m_canvasBidSell.height / m_ratio / m_paintBidSell.m_scaleFactorY));
+        m_bidSell.m_size = new FCSize(m_canvasSizePy.cx, m_canvasSizePy.cy);
+	    invalidate(m_paintBidSell);
+    };
+    
+        /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+
+    /*
+    * 绘制单元格
+    * grid:表格
+    * row:行
+    * column:列
+    * cell:单元格
+    * paint:绘图对象
+    * left:左侧坐标
+    * top:上方坐标
+    * right:右侧坐标
+    * bottom:下方坐标
+    */
+    m_paintBidSell.onPaintGridCell = function (grid, row, column, cell, paint, left, top, right, bottom) {
+	    if (m_maxVolume_BidSell > 0) {
+		    var volMaxWidth = right - left - 10;
+		    var thisWidth = cell.m_vol / m_maxVolume_BidSell * volMaxWidth;
+		    if (cell.m_direction == "buy") {
+			    paint.fillRect(m_upColor2_BidSell, right - 10 - thisWidth, top + 1, right - 10, bottom - 1);
+			    paint.drawText(cell.m_price, m_upColor_BidSell, cell.m_font, 10, top + (bottom - top) / 2);
+		    } else if (cell.m_direction == "sell") {
+			    paint.fillRect(m_downColor2_BidSell, right - 10 - thisWidth, top + 1, right - 10, bottom - 1);
+			    paint.drawText(cell.m_price, m_downColor_BidSell, cell.m_font, 10, top + (bottom - top) / 2);
+		    }
+		    var volText = cell.m_vol.toFixed(5);
+		    var volSize = paint.textSize(volText, cell.m_font);
+		    paint.drawText(volText, m_textColor_BidSell, cell.m_font, right - volSize.cx - 20, top + (bottom - top) / 2);
+        }
+    };
+    
+    //是否允许重绘
+    var m_allowPaint_BidSell = false;
+
+    //检查绘图
+    var checkBidSellPaint = function(){
+        if(m_allowPaint_BidSell){
+			invalidateView(m_bidSell, m_paintBidSell);
+            m_allowPaint_BidSell = false;
+        }
+    };
+
+    setInterval(checkBidSellPaint, 300);
+
+    /*
+     * 查询数据
+     */ 
+    var queryBidSellData = function () {
+	    var ws = new WebSocket("wss://ws.coincap.io/trades/binance");
+	    ws.onopen = function () {
+	    };
+	    ws.onmessage = function (e) {
+		    var json = eval('(' + e.data + ')');
+		    if (json.base == "bitcoin" && json.quote == "tether") {
+			    var hasData = false;
+			    m_maxVolume_BidSell = 0;
+			    var rowsSize = m_bidSell.m_rows.length;
+			    for (var i = 0; i < rowsSize; i++) {
+				    var thisCell = m_bidSell.m_rows[i].m_cells[0];
+				    if (thisCell.m_price == parseFloat(json.price.toFixed(1))) {
+					    hasData = true;
+					    if (thisCell.m_direction == json.direction) {
+						    thisCell.m_vol = thisCell.m_vol + json.volume;
+						    if (m_maxVolume_BidSell < thisCell.m_vol) {
+							    m_maxVolume_BidSell = thisCell.m_vol;
+						    }
+					    } else {
+						    var newVol = thisCell.m_vol - json.volume;
+						    if (newVol > 0) {
+							    thisCell.m_vol = newVol;
+							    if (m_maxVolume_BidSell < thisCell.m_vol) {
+								    m_maxVolume_BidSell = thisCell.m_vol;
+							    }
+						    } else {
+							    m_bidSell.m_rows.splice(i, 1);
+							    break;
+						    }
+					    }
+				    } else {
+					    if (m_maxVolume_BidSell < thisCell.m_vol) {
+						    m_maxVolume_BidSell = thisCell.m_vol;
+					    }
+                    }
+			    }
+			    if (!hasData) {
+				    var row = new FCGridRow;
+				    m_bidSell.m_rows.push(row);
+				    var cell = new FCBidSellCellEx;
+				    cell.m_direction = json.direction;
+				    cell.m_price = parseFloat(json.price.toFixed(1));
+				    cell.m_vol = json.volume;
+				    cell.m_font = "16px Arial";
+				    cell.m_colSpan = 1;
+				    cell.m_rowSpan = 1;
+				    row.m_cells.push(cell);
+				    if (m_maxVolume_BidSell < cell.m_vol) {
+					    m_maxVolume_BidSell = cell.m_vol;
+				    }
+			    }
+			    m_bidSell.m_rows.sort((m, n) => {
+				    if (m.m_cells[0].m_direction == "sell" && n.m_cells[0].m_direction == "buy") {
+					    return -1;
+				    }
+				    if (m.m_cells[0].m_direction == "buy" && n.m_cells[0].m_direction == "sell") {
+					    return 1;
+				    }
+				    if (m.m_cells[0].m_price > n.m_cells[0].m_price) {
+					    return -1;
+				    }
+				    else if (m.m_cells[0].m_price < n.m_cells[0].m_price) {
+					    return 1;
+				    }
+				    else return 0;
+			    });
+			    m_allowPaint_BidSell = true;
+		    }
+	    };
+	    ws.onclose = function (e) {
+		    console.log("close");
+	    };
+	    ws.onerror = function (e) {
+		    console.log(error);
+	    };
+    };
+
+    invalidate(m_paintBidSell);
+    queryBidSellData();
+    </script>
+</body>
+</html>

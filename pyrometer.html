@@ -1,0 +1,687 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat的HTML5框架(开源)</title>
+<style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+</style>
+</head>
+<body>
+    <canvas id="pyCanvas" width="400" height="700" >
+        Your browser does not support canvas element.
+    </canvas>
+ <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_grid.js" ></script>
+     <script type="text/javascript" src="facecat_div.js" ></script>
+    <script type="text/javascript">
+    var m_canvasPy = document.getElementById("pyCanvas"); //绘图区域
+    m_canvasPy.width = window.innerWidth;
+    m_canvasPy.height = window.innerHeight;
+    var m_contextPy = m_canvasPy.getContext("2d"); //绘图上下文
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasPy.style.width = m_canvasPy.width + 'px';
+        m_canvasPy.style.height = m_canvasPy.height + 'px';
+        m_canvasPy.height = m_canvasPy.height* window.devicePixelRatio;
+        m_canvasPy.width = m_canvasPy.width * window.devicePixelRatio;
+        m_contextPy.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+
+    var m_paintPy = new FCPaint(); //绘图对象
+    m_paintPy.m_canvas = m_canvasPy;
+    m_canvasPy.m_paint = m_paintPy;
+    m_paintPy.m_defaultUIStyle = "dark";
+    var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintPy.m_defaultUIStyle = "light";
+    }
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintPy.m_scaleFactorX = 2.5;
+        m_paintPy.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSizePy = new FCSize((m_canvasPy.width / m_ratio / m_paintPy.m_scaleFactorX), (m_canvasPy.height / m_ratio / m_paintPy.m_scaleFactorY));
+
+    var m_views_Py = new Array(); //视图集合
+    m_canvasPy.m_views = m_views_Py;
+    
+    // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchPy = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchPy <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchPy = now;
+    }, {
+        passive: false
+    });
+    
+    //面积图数据
+    function PyrometerData(){
+        this.m_value = 0; //数值
+        this.m_key = null;
+        this.m_firstPrice = null;
+        this.m_data = null;
+        this.m_type = "pdata"; //类型
+    }
+    
+    PyrometerData.prototype = FCView;
+    
+    /*
+    * 面积图
+    */
+    function PyrometerDiv(){
+        this.m_views = new Array(); //子视图集合
+        this.m_useAnimation = false; //是否使用动画
+        this.m_type = "pyrometer"; //类型
+        this.INF = 0x3f3f3f; //无效数据
+        this.Rwidth = 0
+        this.Rheight = 0;
+        this.m_rects = new Array(); //显示区域
+    }
+    
+    PyrometerDiv.prototype = FCView;
+    
+    //创建买卖档
+    var m_pyrometer = new PyrometerDiv();
+     m_pyrometer.m_paint = m_paintPy;
+    if (m_pyrometer.m_paint.m_defaultUIStyle == "dark") {
+        m_pyrometer.m_backColor = "rgb(0,0,0)";
+        m_pyrometer.m_borderColor = "rgb(100,100,100)";
+        m_pyrometer.m_textColor = "rgb(255,255,255)";
+    } else if (m_pyrometer.m_paint.m_defaultUIStyle == "light") {
+        m_pyrometer.m_backColor = "rgb(255,255,255)";
+        m_pyrometer.m_borderColor = "rgb(150,150,150)";
+        m_pyrometer.m_textColor = "rgb(0,0,0)";
+    }
+    m_pyrometer.m_location = new FCPoint(0, 0);
+    m_pyrometer.m_size = new FCSize(m_canvasSizePy.cx, m_canvasSizePy.cy);
+
+    m_pyrometer.m_visible = true;
+    m_views_Py.push(m_pyrometer);
+    
+    var layoutrow = function(pyrometer, R, w){
+        var width = pyrometer.m_size.cx;
+        var height = pyrometer.m_size.cy;
+        var lx = width - pyrometer.Rwidth;
+        var ly = height - pyrometer.Rheight;
+        var direction = 0;  // 0: horizontal;  1: vertical
+
+        // refresh Rwidth, Rheight
+        var sum = 0;
+        for(var x = 0; x < R.length; x++)
+        {
+            sum += R[x];
+        }
+        var ext = sum / w;
+        if (Math.abs(w - pyrometer.Rwidth) <= 1e-6)
+        {
+            pyrometer.Rheight -= ext;
+            direction = 0;
+        }
+        else
+        {
+            pyrometer.Rwidth -= ext;
+            direction = 1;
+        }
+
+        // store
+        for(var x = 0; x < R.length; x++)
+        {
+            var r = R[x];
+            if (direction == 0)
+            {
+                var hh = ext, ww = r / ext;
+                var newRect = new FCRect(0, 0, 0, 0);
+                newRect.left = lx;
+                newRect.top = ly;
+                newRect.right = lx + ww;
+                newRect.bottom = ly + hh;
+                pyrometer.m_rects.push(newRect);
+                // refresh
+                lx += ww;
+            }
+            else
+            {
+                var ww = ext, hh = r / ext;
+                var newRect = new FCRect(0, 0, 0, 0);
+                newRect.left = lx;
+                newRect.top = ly;
+                newRect.right = lx + ww;
+                newRect.bottom = ly + hh;
+                pyrometer.m_rects.push(newRect);
+                // refresh
+                ly += hh;
+            }
+        }
+    };
+    
+    var rWidth = function(pyrometer, R, w){
+        return Math.min(pyrometer.Rwidth, pyrometer.Rheight);
+    };
+    
+    var worst = function(pyrometer, R, w){
+        if (R.length == 0){
+            return pyrometer.INF;
+        }
+        var rmx = 0, rmn = pyrometer.INF, s = 0;
+        for(var x = 0; x < R.length; x++)
+        {
+            var r = R[x];
+            s += r;
+            if (r > rmx) rmx = r;
+            if (r < rmn) rmn = r;
+        }
+        var pw = Math.pow(w, 2), sw = Math.pow(s, 2);
+        var res = Math.max(pw * rmx / sw, sw / (pw * rmn));
+        return Math.max(pw * rmx / sw, sw / (pw * rmn));
+    };
+    
+    /*
+    * 动画秒表
+    */
+    var onPyrometerTime = function(pyrometer){
+        var paint2 = false;
+        if(pyrometer.m_useAnimation){
+           for (var i = 0; i < pyrometer.m_rects.length; i++)
+           {
+               var subView = pyrometer.m_views[i];
+               var targetRect = pyrometer.m_rects[i];
+               var nowRect = new FCRect(subView.m_location.x, subView.m_location.y, subView.m_location.x + subView.m_size.cx, subView.m_location.y + subView.m_size.cy);
+               if (true)
+               {
+                   if (nowRect.left > targetRect.left)
+                   {
+                       nowRect.left -= (nowRect.left - targetRect.left) / 4;
+                       if (nowRect.left - targetRect.left < 10)
+                       {
+                           nowRect.left = targetRect.left;
+                       }
+                       paint2 = true;
+                   }
+                   else if (nowRect.left < targetRect.left)
+                   {
+                       nowRect.left += (targetRect.left - nowRect.left) / 4;
+                       if (targetRect.left - nowRect.left < 10)
+                       {
+                           nowRect.left = targetRect.left;
+                       }
+                       paint2 = true;
+                   }
+               }
+
+               if (true)
+               {
+                   if (nowRect.top > targetRect.top)
+                   {
+                       nowRect.top -= (nowRect.top - targetRect.top) / 4;
+                       if (nowRect.top - targetRect.top < 10)
+                       {
+                           nowRect.top = targetRect.top;
+                       }
+                       paint2 = true;
+                   }
+                   else if (nowRect.top < targetRect.top)
+                   {
+                       nowRect.top += (targetRect.top - nowRect.top) / 4;
+                       if (targetRect.top - nowRect.top < 10)
+                       {
+                           nowRect.top = targetRect.top;
+                       }
+                       paint2 = true;
+                   }
+               }
+
+               if (true)
+               {
+                   if (nowRect.right > targetRect.right)
+                   {
+                       nowRect.right -= (nowRect.right - targetRect.right) / 4;
+                       if (nowRect.right - targetRect.right < 10)
+                       {
+                           nowRect.right = targetRect.right;
+                       }
+                       paint2 = true;
+                   }
+                   else if (nowRect.right < targetRect.right)
+                   {
+                       nowRect.right += (targetRect.right - nowRect.right) / 4;
+                       if (targetRect.right - nowRect.right < 10)
+                       {
+                           nowRect.right = targetRect.right;
+                       }
+                       paint2 = true;
+                   }
+               }
+               if (true)
+               {
+                   if (nowRect.bottom > targetRect.bottom)
+                   {
+                       nowRect.bottom -= (nowRect.bottom - targetRect.bottom) / 4;
+                       if (nowRect.bottom - targetRect.bottom < 10)
+                       {
+                           nowRect.bottom = targetRect.bottom;
+                       }
+                       paint2 = true;
+                   }
+                   else if (nowRect.bottom < targetRect.bottom)
+                   {
+                       nowRect.bottom += (targetRect.bottom - nowRect.bottom) / 4;
+                       if (targetRect.bottom - nowRect.bottom < 10)
+                       {
+                           nowRect.bottom = targetRect.bottom;
+                       }
+                       paint2 = true;
+                   }
+               }
+               subView.m_location = new FCPoint(nowRect.left, nowRect.top);
+               subView.m_size = new FCSize(nowRect.right - nowRect.left, nowRect.bottom - nowRect.top);
+           }
+        }else{
+            for (var i = 0; i < pyrometer.m_rects.length; i++)
+           {
+               var subView = pyrometer.m_views[i];
+               var targetRect = pyrometer.m_rects[i];
+               subView.m_location = new FCPoint(targetRect.left, targetRect.top);
+               subView.m_size = new FCSize(targetRect.right - targetRect.left, targetRect.bottom - targetRect.top);
+            }
+        }
+        if(paint2){
+            invalidateView(pyrometer, pyrometer.m_paint);
+        }
+    };
+    
+    /*
+    * 更新数据
+    */
+    var updatePyromoter = function(pyrometer){
+        pyrometer.m_rects = new Array();
+        var totalAmount = 0;
+        for (var i = 0; i < pyrometer.m_views.length; i++)
+        {
+            totalAmount += pyrometer.m_views[i].m_value;
+        }
+        var rates = new Array();
+        for (var i = 0; i < pyrometer.m_views.length; i++)
+        {
+            rates.push(pyrometer.m_views[i].m_value / totalAmount);
+        }
+        pyrometer.Rwidth = pyrometer.m_size.cx;
+        pyrometer.Rheight = pyrometer.m_size.cy;
+        var areas = new Array();
+        for (var i = 0; i < rates.length; i++)
+        {
+            areas.push(rates[i] * pyrometer.m_size.cx * pyrometer.m_size.cy);
+        }
+        var children = areas;
+        var row = new Array();
+        var w = Math.min(pyrometer.Rwidth, pyrometer.Rheight);
+        while (true)
+        {
+            if(pyrometer.m_rects.length > pyrometer.m_views.length){
+                break;
+            }
+            if (w <= 0) {
+                break;
+            }
+            if (children.length == 0)
+            {
+                if (row.length > 0)
+                {
+                    layoutrow(pyrometer, row, w);  // output current row
+                }
+                break;
+            }
+
+            //
+            var c = children[0];
+            if (c == 0)
+            {
+                break;
+            }
+            var newrow = new Array();
+            for(var x = 0; x < row.length; x++){
+                newrow.push(row[x]);
+            }
+            newrow.push(c);
+            if (worst(pyrometer, row, w) >= worst(pyrometer, newrow, w))
+            {  // can be placed in this row
+                //cout << " add: " << c << endl;
+                var tmp = new Array();
+                for (var x = 1; x < children.length; x++)
+                {
+                    tmp.push(children[x]);
+                }
+                children = tmp;
+                row = newrow;
+            }
+            else
+            {  // placed in a empty new row
+                //cout << " new: " << c << endl;
+                layoutrow(pyrometer, row, w);  // output current row
+                row = new Array();
+                w = rWidth(pyrometer, row, parseInt(w));
+            }
+        }
+    };
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_Py = function(view, mp, buttons, clicks, delta) {
+        
+    };
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseDown_Py = function(view, mp, buttons, clicks, delta) {
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_Py = function (view, mp, buttons, clicks, delta) {
+         if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_Py = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_Py = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_Py = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+    };
+
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_Py = function (view, mp, buttons, clicks, delta) {
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseUp_Py = function (view, mp, buttons, clicks, delta) {
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintPy.onPaint = function (view, paint, clipRect) {
+        if (view.m_type == "pyrometer") {
+	        drawDiv(view, paint, clipRect);
+	    }else if (view.m_type == "pdata") {
+	        var diffRange = ((view.m_data.price - view.m_firstPrice) / view.m_data.price * 100).toFixed(2) + "%";
+	        var backColor = null;
+	        if (view.m_parent.m_paint.m_defaultUIStyle == "dark") {
+	            if(view.m_data.price >= view.m_firstPrice){
+	                backColor = "rgb(219,68,83)";
+	            }else{
+	                backColor = "rgb(15,193,118)";
+	            }
+	        } else if (view.m_parent.m_paint.m_defaultUIStyle == "light") {
+	            if(view.m_data.price >= view.m_firstPrice){
+	                backColor = "rgb(255,255,255)";
+	            }else{
+	                backColor = "rgb(255,255,255)";
+	            }
+	        }
+	        paint.fillRect(backColor, 0, 0, view.m_size.cx, view.m_size.cy);
+	        var fontSize1 = parseInt(Math.min(view.m_size.cx, view.m_size.cy) / 5);
+	        if(fontSize1 > 1){
+	            var baseUpper = view.m_data.base.toUpperCase();
+	            var font1 = fontSize1 + "px Arial";
+	            var tSize = paint.textSize(baseUpper, font1);
+	            while(tSize.cx > view.m_size.cx - 10){
+	                fontSize1 -= 1;
+	                if(fontSize1 < 1){
+	                    return;
+	                }
+	                font1 = fontSize1 + "px Arial";
+	                tSize = paint.textSize(baseUpper, font1);
+	            }	            
+	            var quoteUpper = view.m_data.quote.toUpperCase();
+	            var font2 = (fontSize1 / 2) + "px Arial";
+	            var tSize2 = paint.textSize(quoteUpper, font2);
+	            if (view.m_parent.m_paint.m_defaultUIStyle == "dark") {
+                    paint.drawText(baseUpper, "rgb(255,255,255)", font1, (view.m_size.cx - tSize.cx) / 2, view.m_size.cy / 2 - tSize.cy);
+	                paint.drawText(quoteUpper, "rgb(255,255,255)", font2, (view.m_size.cx - tSize2.cx) / 2, view.m_size.cy / 2);
+                } else if (view.m_parent.m_paint.m_defaultUIStyle == "light") {
+                     paint.drawText(baseUpper, "rgb(0,0,0)", font1, (view.m_size.cx - tSize.cx) / 2, view.m_size.cy / 2 - tSize.cy);
+	                paint.drawText(quoteUpper, "rgb(0,0,0)", font2, (view.m_size.cx - tSize2.cx) / 2, view.m_size.cy / 2);
+                }
+	           
+	            var strPrice = view.m_data.price.toFixed(6);
+	            var font3 = (fontSize1 * 2 / 3) + "px Arial";
+	            var tSize5 = paint.textSize(strPrice, font3);
+	             if (view.m_parent.m_paint.m_defaultUIStyle == "dark") {
+                    paint.drawText(strPrice, "rgb(255,255,255)", font3, (view.m_size.cx - tSize5.cx) / 2, view.m_size.cy / 2 + tSize.cy);
+                } else if (view.m_parent.m_paint.m_defaultUIStyle == "light") {
+                    paint.drawText(strPrice, "rgb(0,0,0)", font3, (view.m_size.cx - tSize5.cx) / 2, view.m_size.cy / 2 + tSize.cy);
+                }
+	        }
+	    }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintPy.onPaintBorder = function (view, paint, clipRect) {
+        if (view.m_type == "pdata") {
+	        paint.drawRect(view.m_borderColor, 1, 0, 0, 0, view.m_size.cx, view.m_size.cy);
+	    }
+    };
+    
+    addMouseDownEvent(m_canvasPy, onMouseDown_Py);
+    addMouseMoveEvent(m_canvasPy, onMouseMove_Py);
+    addMouseWheelEvent(m_canvasPy, onMouseWheel_Py);
+    addMouseUpEvent(m_canvasPy, onMouseUp_Py, onClick_Py);
+    addTouchBeginEvent(m_canvasPy, onTouchBegin_Py);
+    addTouchMoveEvent(m_canvasPy, onTouchMove_Py);
+    addTouchEndEvent(m_canvasPy, onTouchEnd_Py, onClick_Py);
+
+    /*
+    * 重置所有的大小
+    */
+    var resizeAll = function(){
+        m_canvasPy.width = window.innerWidth;
+        m_canvasPy.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasPy.style.width = m_canvasPy.width + 'px';
+            m_canvasPy.style.height = m_canvasPy.height + 'px';
+            m_canvasPy.height = m_canvasPy.height* window.devicePixelRatio;
+            m_canvasPy.width = m_canvasPy.width * window.devicePixelRatio;
+            m_contextPy.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizePy = new FCSize((m_canvasPy.width / m_ratio / m_paintPy.m_scaleFactorX), (m_canvasPy.height / m_ratio / m_paintPy.m_scaleFactorY));
+        m_pyrometer.m_size = new FCSize(m_canvasSizePy.cx, m_canvasSizePy.cy);
+	    invalidate(m_paintPy);
+    };
+
+    /*
+    * 重置大小 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+
+    var m_allowPaint_Py = false;
+
+    /*
+    * 检查绘图
+    */
+    var checkPyPaint = function(){
+        if(m_allowPaint_Py){
+        	updatePyromoter(m_pyrometer);
+            onPyrometerTime(m_pyrometer);
+            invalidateView(m_pyrometer, m_paintPy);
+            m_allowPaint_Py = false;
+        }
+    };
+
+    setInterval(checkPyPaint, 50);
+
+    /*
+     * 查询数据
+     */ 
+    var queryPyData = function () {
+	    var ws = new WebSocket("wss://ws.coincap.io/trades/binance");
+	    ws.onopen = function () {
+	    };
+	    ws.onmessage = function (e) {
+		    var json = eval('(' + e.data + ')');
+		    var key = json.base + "," + json.quote;
+		    var hasData = false;
+		    var viewsSize = m_pyrometer.m_views.length;
+		    for (var i = 0; i < viewsSize; i++) {
+			    var thisCell = m_pyrometer.m_views[i];
+			    if(thisCell.m_key == key){
+			        hasData = true;
+			        thisCell.m_data = json;
+			        thisCell.m_value = thisCell.m_value + json.volume * json.price;
+			        break;
+			    }
+			}
+	        if(!hasData){
+	            var pData = new PyrometerData;
+			    pData.m_key = key;
+			    pData.m_text = key;
+			    pData.m_data = json;
+			    pData.m_value = json.volume * json.price;
+			    pData.m_size = new FCSize(0, 0);
+			    pData.m_location = new FCPoint(m_pyrometer.m_size.cx, m_pyrometer.m_size.cy);
+			    pData.m_firstPrice = json.price;
+			    pData.m_backColor = null;
+			    pData.m_borderColor = "rgb(0,0,0)";
+			    pData.m_visible = true;
+			    pData.m_parent = m_pyrometer;
+			    pData.m_paint = m_paintPy;
+			    m_pyrometer.m_views.push(pData);
+	        }   
+	        m_pyrometer.m_views.sort((m, n) => {
+			    if (m.m_value > n.m_value) {
+				    return -1;
+			    }
+			    else if (m.m_value < n.m_value) {
+				    return 1;
+			    }
+			    else return 0;
+		    });
+		    m_allowPaint_Py = true;
+	    };
+	    ws.onclose = function (e) {
+		    console.log("close");
+	    };
+	    ws.onerror = function (e) {
+		    console.log(error);
+	    };
+    };
+
+    invalidate(m_paintPy);
+    queryPyData();
+
+    </script>
+</body>
+</html>

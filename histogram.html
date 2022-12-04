@@ -1,0 +1,519 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat的HTML5框架(开源)</title>
+<style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+</style>
+</head>
+<body>
+    <canvas id="histogramCanvas" width="1000" height="750">
+        Your browser does not support canvas element.
+    </canvas>
+    <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_chart.js" ></script>
+    <script type="text/javascript">
+    var m_canvasHistogram = document.getElementById("histogramCanvas"); //绘图区域
+    var m_contextHistogram = m_canvasHistogram.getContext("2d"); //绘图上下文
+    m_canvasHistogram.width = window.innerWidth;
+    m_canvasHistogram.height = window.innerHeight;
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasHistogram.style.width = m_canvasHistogram.width + 'px';
+        m_canvasHistogram.style.height = m_canvasHistogram.height + 'px';
+        m_canvasHistogram.height = m_canvasHistogram.height* window.devicePixelRatio;
+        m_canvasHistogram.width = m_canvasHistogram.width * window.devicePixelRatio;
+        m_contextHistogram.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+   
+    var m_paintHistogram = new FCPaint(); //绘图对象
+    m_paintHistogram.m_defaultUIStyle = "dark";
+       var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintHistogram.m_defaultUIStyle = "light";
+    }
+    m_paintHistogram.m_canvas = m_canvasHistogram;
+    m_canvasHistogram.m_paint = m_paintHistogram;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintHistogram.m_scaleFactorX = 2.5;
+        m_paintHistogram.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSizeHistogram = new FCSize((m_canvasHistogram.width / m_ratio / m_paintHistogram.m_scaleFactorX), (m_canvasHistogram.height / m_ratio / m_paintHistogram.m_scaleFactorY));
+
+    var m_views_Histogram2 = new Array(); //视图集合
+    m_canvasHistogram.m_views = m_views_Histogram2;
+    
+    // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchEnd_Histogram = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchEnd_Histogram <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchEnd_Histogram = now;
+    }, {
+        passive: false
+    });
+
+    //K线视图
+    var m_histogram = new FCChart(); 
+    m_histogram.m_paint = m_paintHistogram;
+    if (m_histogram.m_paint.m_defaultUIStyle == "dark") {
+        m_histogram.m_backColor = "rgb(0,0,0)";
+        m_histogram.m_borderColor = "rgb(100,100,100)";
+        m_histogram.m_textColor = "rgb(255,255,255)";
+    } else if (m_histogram.m_paint.m_defaultUIStyle == "light") {
+        m_histogram.m_backColor = "rgb(255,255,255)";
+        m_histogram.m_borderColor = "rgb(150,150,150)";
+        m_histogram.m_textColor = "rgb(0,0,0)";
+	}
+    m_histogram.m_location = new FCPoint(0, 0);
+    m_histogram.m_size = new FCSize(m_canvasSizeHistogram.cx, m_canvasSizeHistogram.cy);
+    m_histogram.m_visible = true;
+    m_histogram.m_leftVScaleWidth = 70;
+    m_histogram.m_rightVScaleWidth = 0;
+    m_histogram.m_vScaleDistance = 60;
+    m_histogram.m_hScalePixel = 50;
+    m_histogram.m_hScaleHeight = 30;
+    m_histogram.m_candlePaddingTop = 30;
+    m_histogram.m_candlePaddingBottom = 0;
+    m_histogram.m_volPaddingTop = 20;
+    m_histogram.m_volPaddingBottom = 0;
+    m_histogram.m_indPaddingTop = 20;
+    m_histogram.m_indPaddingBottom = 20;
+    m_histogram.m_vScaleDistance = 35;
+    m_histogram.m_candleDivPercent = 1;
+    m_histogram.m_volDivPercent = 1;
+    m_histogram.m_indDivPercent = 1;
+    m_histogram.m_font = "14px Arial";
+    m_histogram.m_data = new Array();
+    m_histogram.m_cycle = "tick";
+    m_views_Histogram2.push(m_histogram);
+    
+   /*
+    * 黑色风格
+    */
+    var toBlack_Chart = function(){
+       m_histogram.m_paint.m_defaultUIStyle = "dark";
+        m_histogram.m_backColor = "rgb(0,0,0)";
+        m_histogram.m_borderColor = "rgb(255,255,255)";
+        m_histogram.m_textColor = "rgb(255,255,255)";
+        m_histogram.m_scaleColor = "rgb(100,100,100)"; 
+        m_histogram.m_crossTipColor = "rgb(50,50,50)"; 
+        m_histogram.m_crossLineColor = "rgb(100,100,100)"; 
+        m_histogram.m_gridColor = "rgba(100,100,100,0.5)"; 
+       
+    };
+
+    /*
+    * 白色风格
+    */
+    var toWhite_Chart = function(){
+        m_histogram.m_paint.m_defaultUIStyle = "light";
+        m_histogram.m_backColor = "rgb(255,255,255)";
+        m_histogram.m_borderColor = "rgb(0,0,0)";
+        m_histogram.m_textColor = "rgb(0,0,0)";
+        m_histogram.m_scaleColor = "rgb(0,0,0)"; 
+        m_histogram.m_crossTipColor = "rgb(220,220,220)"; 
+        m_histogram.m_crossLineColor = "rgb(100,100,100)"; 
+        m_histogram.m_gridColor = "rgba(0,0,0,0.5)"; 
+    };
+    
+    if(m_histogram.m_paint.m_defaultUIStyle == "dark"){
+        toBlack_Chart();
+    }else if(m_histogram.m_paint.m_defaultUIStyle == "light"){
+        toWhite_Chart();
+    }
+ 
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_Histogram = function(view, mp, buttons, clicks, delta) {
+       
+    };
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseDown_Histogram = function(view, mp, buttons, clicks, delta) {
+        if (view.m_type == "chart") {
+            if (!view.m_data || view.m_data.length == 0){
+                return;
+            }
+	    }
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_Histogram = function(view, mp, buttons, clicks, delta) {
+        if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+        if (view.m_type == "chart") {
+            if(delta > 0){
+                zoomOutChart(view);
+            }else if(delta < 0){
+                zoomInChart(view);
+            }
+            invalidateView(m_histogram, m_paintHistogram);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_Histogram = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "chart") {
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_Histogram = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "chart") {
+            mouseMoveChart(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paintHistogram);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_Histogram = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "chart") {
+		    m_firstTouchIndexCache_Chart = -1;
+            m_secondTouchIndexCache_Chart = -1;
+	    }
+    };
+
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_Histogram = function(view, mp, buttons, clicks, delta) {
+        if(view.m_type == "chart"){
+		    var firstTouch = false, secondTouch = false;
+		    var firstPoint = mp, secondPoint = mp;
+		    if(buttons == 1){
+		        firstTouch = true;
+		    }
+		    mouseMoveChart(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	        invalidateView(m_histogram, m_paintHistogram);
+        }
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseUp_Histogram = function(view, mp, buttons, clicks, delta) {
+        if (view.m_type == "chart") {
+            m_firstTouchIndexCache_Chart = -1;
+            m_secondTouchIndexCache_Chart = -1;
+	    }
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintHistogram.onPaint = function(view, paint, clipRect) {
+        if(view.m_type == "chart"){
+	        drawChart(view, paint, clipRect);
+	    }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintHistogram.onPaintBorder = function(view, paint, clipRect) {
+    };
+    
+    /*
+    * 重写计算最大最小值
+    * chart:K线
+    */
+    m_histogram.onCalculateChartMaxMin = function(chart){
+        chart.m_candleMax = 0;
+        chart.m_candleMin = 0;
+        chart.m_volMax = 0;
+        chart.m_volMin = 0;
+        chart.m_indMin = 0;
+        chart.m_indMin = 0;
+        if (chart.m_data && chart.m_data.length > 0) { 
+            var lastValidIndex = chart.m_lastVisibleIndex;
+            if(chart.m_lastValidIndex != -1){
+                lastValidIndex = chart.m_lastValidIndex;
+            }            
+            for (var i = chart.m_firstVisibleIndex; i <= lastValidIndex; i++) {
+                var total = chart.m_data[i].m_data1 + chart.m_data[i].m_data2 + chart.m_data[i].m_data3
+                + chart.m_data[i].m_data4 + chart.m_data[i].m_data5 + chart.m_data[i].m_data6;
+                if (i == chart.m_firstVisibleIndex) {
+                    chart.m_candleMax = total;
+                    chart.m_candleMin = 0;
+                }else{
+                    if (chart.m_candleMax < total) {
+                        chart.m_candleMax = total;
+                    }
+                }
+            }
+        }
+    };
+    
+    var m_drawColors = new Array();
+    m_drawColors.push("rgb(59,174,218)");
+    m_drawColors.push("rgb(185,63,150)");
+    m_drawColors.push("rgb(219,68,83)");
+    m_drawColors.push("rgb(246,187,67)");
+    m_drawColors.push("rgb(216,112,173)");
+    m_drawColors.push("rgb(140,192,81)");
+    
+        /*
+    * 重写计算最大最小值
+    * chart:K线
+    */
+    m_paintHistogram.onPaintChartStock = function(chart, paint, clipRect) {
+        if(chart.m_data && chart.m_data.length > 0){
+            var lastValidIndex = chart.m_lastVisibleIndex;
+            if(chart.m_lastValidIndex != -1){
+                lastValidIndex = chart.m_lastValidIndex;
+            }    
+            for (var i = chart.m_firstVisibleIndex; i <= lastValidIndex; i++) {
+                var x = getChartX(chart, i);
+                var y1 = getChartY(chart, 0, chart.m_data[i].m_data1);
+                var zeroY =  getChartY(chart, 0, 0);
+                var dWidth = chart.m_hScalePixel / 3;
+                paint.fillRect(m_drawColors[0], x - dWidth, y1, x + dWidth, zeroY);
+                var y2 = getChartY(chart, 0, chart.m_data[i].m_data1 + chart.m_data[i].m_data2);
+                paint.fillRect(m_drawColors[1], x - dWidth, y2, x + dWidth, y1);
+                var y3 = getChartY(chart, 0, chart.m_data[i].m_data1 + chart.m_data[i].m_data2 + chart.m_data[i].m_data3);
+                paint.fillRect(m_drawColors[2], x - dWidth, y3, x + dWidth, y2);
+                var y4 = getChartY(chart, 0, chart.m_data[i].m_data1 + chart.m_data[i].m_data2 + chart.m_data[i].m_data3 + chart.m_data[i].m_data4);
+                paint.fillRect(m_drawColors[3], x - dWidth, y4, x + dWidth, y3);
+                var y5 = getChartY(chart, 0, chart.m_data[i].m_data1 + chart.m_data[i].m_data2 + chart.m_data[i].m_data3 + chart.m_data[i].m_data4 + chart.m_data[i].m_data5);
+                paint.fillRect(m_drawColors[4], x - dWidth, y5, x + dWidth, y4);
+                var y6 = getChartY(chart, 0, chart.m_data[i].m_data1 + chart.m_data[i].m_data2 + chart.m_data[i].m_data3 + chart.m_data[i].m_data4 + chart.m_data[i].m_data5  + chart.m_data[i].m_data6);
+                paint.fillRect(m_drawColors[5], x - dWidth, y6, x + dWidth, y5);
+                if (chart.m_paint.m_defaultUIStyle == "dark") {
+                     paint.drawRect("rgb(255,255,255)", 1, 0, x - dWidth, y6, x + dWidth, zeroY);
+                    if(chart.m_crossStopIndex == i){
+                        paint.fillRect("rgba(0,0,0,0.2)", x - dWidth, y6, x + dWidth, zeroY);
+                    }
+                }else if (chart.m_paint.m_defaultUIStyle == "light"){
+                     paint.drawRect("rgb(0,0,0)", 1, 0, x - dWidth, y6, x + dWidth, zeroY);
+                    if(chart.m_crossStopIndex == i){
+                        paint.fillRect("rgba(255,255,255,0.2)", x - dWidth, y6, x + dWidth, zeroY);
+                    }
+                }
+            }
+        }
+    };
+    
+    /*
+    * 重写绘制线条的函数
+    * chart:K线
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintHistogram.onPaintChartCrossLine = function(chart, paint, clipRect) {
+        if(!chart.m_data || chart.m_data.length == 0){
+            return;
+        }
+        var candleDivHeight = getCandleDivHeight(chart);
+        var volDivHeight = getVolDivHeight(chart);
+        var indDivHeight = getIndDivHeight(chart);
+        var crossLineIndex = chart.m_crossStopIndex;
+        if (crossLineIndex == -1) {
+            crossLineIndex = chart.m_lastVisibleIndex;
+        }
+        var str = "A" + crossLineIndex;
+        if (str == "ANaN") {
+            crossLineIndex = chart.m_lastVisibleIndex;
+        }
+        var drawTitles = new Array();
+        drawTitles.push("项目1 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目2 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目3 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目4 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目5 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目6 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+
+        var iLeft = chart.m_leftVScaleWidth + 5;
+        for(var i = 0; i < drawTitles.length; i++){
+            var tSize = paint.textSize(drawTitles[i], chart.m_font);
+            paint.drawText(drawTitles[i], m_drawColors[i], chart.m_font, iLeft, 5 + tSize.cy / 2);
+            iLeft += tSize.cx + 5;
+        }
+    };
+    
+    addMouseDownEvent(m_canvasHistogram, onMouseDown_Histogram);
+    addMouseMoveEvent(m_canvasHistogram, onMouseMove_Histogram);
+    addMouseWheelEvent(m_canvasHistogram, onMouseWheel_Histogram);
+    addMouseUpEvent(m_canvasHistogram, onMouseUp_Histogram, onClick_Histogram);
+    addTouchBeginEvent(m_canvasHistogram, onTouchBegin_Histogram);
+    addTouchMoveEvent(m_canvasHistogram, onTouchMove_Histogram);
+    addTouchEndEvent(m_canvasHistogram, onTouchEnd_Histogram, onClick_Histogram);
+
+    /*
+     * 重置大小
+     */ 
+    var resizeAll = function() {
+     m_canvasHistogram.width = window.innerWidth;
+        m_canvasHistogram.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasHistogram.style.width = m_canvasHistogram.width + 'px';
+            m_canvasHistogram.style.height = m_canvasHistogram.height + 'px';
+            m_canvasHistogram.height = m_canvasHistogram.height* window.devicePixelRatio;
+            m_canvasHistogram.width = m_canvasHistogram.width * window.devicePixelRatio;
+            m_contextHistogram.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizeHistogram = new FCSize((m_canvasHistogram.width / m_ratio / m_paintHistogram.m_scaleFactorX), (m_canvasHistogram.height / m_ratio / m_paintHistogram.m_scaleFactorY));
+        m_histogram.m_size = new FCSize(m_canvasSizeHistogram.cx, m_canvasSizeHistogram.cy);
+        resetChartVisibleRecord(m_histogram);
+        checkChartLastVisibleIndex(m_histogram);
+        calculateChartMaxMin(m_histogram);
+	    invalidate(m_paintHistogram);
+    };
+    
+   /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+
+    invalidate(m_paintHistogram);
+    
+    /*
+    * 插入模拟数据
+    */
+    var insertData = function(){
+        var data = new SecurityData();
+        data.m_close = 0;
+        data.m_date = Date.now();
+        data.m_data1 = Math.random() * 100 - 50;
+        data.m_data2 = Math.random() * 100 - 50;
+        data.m_data3 = Math.random() * 100 - 50;
+        data.m_data4 = Math.random() * 100 - 50;
+        data.m_data5 = Math.random() * 100 - 50;
+        data.m_data6 = Math.random() * 100 - 50;
+        if(data.m_data1 < 0){
+            data.m_data1 = 0;
+        }
+        if(data.m_data2 < 0){
+            data.m_data2 = 0;
+        }
+        if(data.m_data3 < 0){
+            data.m_data3 = 0;
+        }
+        if(data.m_data4 < 0){
+            data.m_data4 = 0;
+        }
+        if(data.m_data5 < 0){
+            data.m_data5 = 0;
+        }
+        if(data.m_data6 < 0){
+            data.m_data6 = 0;
+        }
+        m_histogram.m_data.push(data);
+        resetChartVisibleRecord(m_histogram);
+        checkChartLastVisibleIndex(m_histogram);
+        m_histogram.onCalculateChartMaxMin(m_histogram);
+        invalidateView(m_histogram, m_paintHistogram);
+    };
+    
+    setInterval(insertData, 200);
+    </script>
+<br/>
+<br/>
+<br/>
+</body>
+</html>

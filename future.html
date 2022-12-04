@@ -1,0 +1,1154 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat</title>
+<style>
+			html,
+			body {
+				width: 100%;
+				height: 100%
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+
+</style>
+</head>
+<body> 
+    <canvas id="mycanvas" width="1000" height="700">
+        Your browser does not support canvas element
+    </canvas>
+    <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_grid.js" ></script>
+    <script type="text/javascript" src="facecat_chart.js" ></script>
+    <script type="text/javascript" src="facecat_date.js" ></script>
+    <script type="text/javascript" src="facecat_tree.js" ></script>
+    <script type="text/javascript" src="facecat_tab.js" ></script>
+    <script type="text/javascript" src="facecat_div.js" ></script>
+<script type="text/javascript" src="facecat_split.js" ></script>
+<script type="text/javascript" src="facecat_layout.js" ></script>
+<script type="text/javascript" src="facecat_btn.js" ></script>
+<script type="text/javascript" src="facecat_input.js" ></script>
+    <script type="text/javascript">
+    var m_canvas = document.getElementById("mycanvas"); //绘图区域
+    var m_context = m_canvas.getContext("2d"); //绘图上下文
+    m_canvas.width = window.innerWidth;
+   m_canvas.height = window.innerHeight;
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvas.style.width = m_canvas.width + 'px';
+        m_canvas.style.height = m_canvas.height + 'px';
+        m_canvas.height = m_canvas.height* window.devicePixelRatio;
+        m_canvas.width = m_canvas.width * window.devicePixelRatio;
+        m_context.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+    m_isMobile = isMobileMode();
+    
+    var m_paint = new FCPaint(); //绘图对象
+    m_paint.m_canvas = m_canvas; 
+    m_canvas.m_paint = m_paint;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paint.m_scaleFactorX = 2.5;
+        m_paint.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSize = new FCSize((m_canvas.width / m_ratio / m_paint.m_scaleFactorX), (m_canvas.height / m_ratio / m_paint.m_scaleFactorY));
+    m_paint.m_defaultUIStyle = "dark";
+       var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paint.m_defaultUIStyle = "light";
+    }
+    var m_views = new Array(); //视图集合
+    m_canvas.m_views = m_views;
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onClick = function (view, mp, buttons, clicks, delta) {
+        if(view.m_type == "tabbutton"){
+            var tabView = view.m_parent;
+            var oldPage = null;
+            for(var i = 0; i < tabView.m_tabPages.length; i++){
+                if(tabView.m_tabPages[i].m_visible){
+                    oldPage = tabView.m_tabPages[i];
+                    break;
+                }
+            }
+            for(var i = 0; i < tabView.m_tabPages.length; i++){
+                if(tabView.m_tabPages[i].m_headerButton == view){
+                    selectTabPage(tabView, tabView.m_tabPages[i]);
+                    if(oldPage){
+                        startTabPageAnimation(tabView.m_tabPages[i], oldPage);
+                    }
+                    break;
+                }
+            }
+            invalidateView(tabView, m_paint);
+        }
+        else if(view.m_type == "radiobutton"){
+            clickRadioButton(view, mp);
+            invalidate(view.m_paint);
+        }
+        else if(view.m_type == "checkbox"){
+            clickCheckBox(view, mp);
+            invalidateView(view.m_parent, view.m_paint);
+        }
+    };
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseDown = function(view, mp, buttons, clicks, delta) {
+        var firstTouch = false, secondTouch = false;
+        var firstPoint = mp, secondPoint = mp;
+        if (buttons == 1) {
+            firstTouch = true;
+        }
+	    if (view.m_type == "tree") {
+		    mouseDownTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+         if (view.m_type == "grid") {
+		    mouseDownGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+        if (view.m_type == "div" || view.m_type == "layout") {
+		    mouseDownDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "calendar") {
+	        clickCalendar(mp, view);
+        }
+        if (view.m_type == "button") {
+            invalidateView(view, m_paint);
+        }
+    };
+
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove = function(view, mp, buttons, clicks, delta) {
+       if (view.m_type == "tree") {
+            mouseMoveTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	        invalidateView(view, m_paint);
+        }
+        if (view.m_type == "grid") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+                firstTouch = true;
+            }
+            mouseMoveGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paint);
+        }
+        if (view.m_type == "div" || view.m_type == "layout") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+	        mouseMoveDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paint);
+        }  
+        if(view.m_type == "chart"){
+		    var firstTouch = false, secondTouch = false;
+		    var firstPoint = mp, secondPoint = mp;
+		    if(buttons == 1){
+		        firstTouch = true;
+		    }
+		    mouseMoveChart(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	        invalidateView(m_chart, m_paint);
+        }
+        if (view.m_type == "button") {
+            invalidateView(view, m_paint);
+        }
+    };
+    
+
+    
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel = function(view, mp, buttons, clicks, delta) {
+        if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+        if (view.m_type == "tree") {
+	        mouseWheelTree(view, delta);
+	        invalidateView(view, m_paint);
+	    }
+	    else if (view.m_type == "grid") {
+		    mouseWheelGrid(view, delta);
+	        invalidateView(view, m_paint);
+	    }
+	    else if (view.m_type == "div" || view.m_type == "layout") {
+	        mouseWheelDiv(view, delta);
+		    invalidateView(view, m_paint);
+	    }else if (view.m_type == "chart") {
+            if(delta > 0){
+                zoomOutChart(view);
+            }else if(delta < 0){
+                zoomInChart(view);
+            }
+            invalidateView(view, m_paint);
+        }
+    };
+    
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseUp = function(view, mp, buttons, clicks, delta) {
+        var firstTouch = false, secondTouch = false;
+        var firstPoint = mp, secondPoint = mp;
+        if (buttons == 1) {
+            firstTouch = true;
+        }
+	    if (view.m_type == "tree") {
+
+		    mouseUpTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+        if (view.m_type == "grid") {
+            mouseUpGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+        if (view.m_type == "div" || view.m_type == "layout") {
+	        mouseUpDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+        if (view.m_type == "chart") {
+            m_firstTouchIndexCache_Chart = -1;
+            m_secondTouchIndexCache_Chart = -1;
+        }
+        if (view.m_type == "button") {
+            invalidateView(view, m_paint);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "tree") {
+		    mouseDownTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "grid") {
+		    mouseDownGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "div" || view.m_type == "layout") {
+		    mouseDownDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "calendar") {
+	        clickCalendar(m_touchFirstPoint, view);
+        }
+        if (view.m_type == "button") {
+            invalidateView(view, m_paint);
+        }
+    };
+
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "tree") {
+            mouseMoveTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paint);
+        }
+        if (view.m_type == "grid") {
+            mouseMoveGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paint);
+        }
+        if (view.m_type == "div" || view.m_type == "layout") {
+            mouseMoveDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paint);
+        }
+        if (view.m_type == "chart") {
+            mouseMoveChart(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paint);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "tree") {
+		    mouseUpTree(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "grid") {
+		    mouseUpGrid(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "div" || view.m_type == "layout") {
+		    mouseUpDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "chart") {
+		    m_firstTouchIndexCache_Chart = -1;
+            m_secondTouchIndexCache_Chart = -1;
+        }
+        if (view.m_type == "button") {
+            invalidateView(view, m_paint);
+        }
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paint.onPaint = function (view, paint, clipRect) {
+        if(view.m_type == "chart"){
+	        drawChart(view, paint, clipRect);
+	    }
+	    else if(view.m_type == "grid"){
+	        drawDiv(view, paint, clipRect);
+	       drawGrid(view, paint, clipRect);
+	    }
+	    else if (view.m_type == "tree") {
+	        drawDiv(view, paint, clipRect);
+		    drawTree(view, paint, clipRect);
+	    }
+	    else if (view.m_type == "calendar") {
+		    drawCalendar(view, paint);
+	    }
+	    else if (view.m_type == "label") {
+		    if(view.m_textColor){
+                var tSize = paint.textSize(view.m_text, view.m_font);
+                paint.drawText(view.m_text, view.m_textColor, view.m_font, 0, view.m_size.cy / 2 + 1);
+            }
+	    }
+	    else if (view.m_type == "radiobutton") {
+	        drawRadioButton(view, paint, clipRect);
+	    }
+	    else if (view.m_type == "checkbox") {
+	        drawCheckBox(view, paint, clipRect);
+	    }
+	    else{
+	        drawButton(view, paint, clipRect);
+        }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paint.onPaintBorder = function (view, paint, clipRect) {
+        if (view.m_type == "grid") {
+		    drawDivBorder(view, paint, clipRect);
+		    drawGridScrollBar(view, paint, clipRect);
+	    }
+	    else if (view.m_type == "tree"){
+            drawDivBorder(view, paint, clipRect);
+		    drawTreeScrollBar(view, paint, clipRect);
+	    }
+	    else if (view.m_type == "div") {
+	        drawDivBorder(view, paint, clipRect);
+		    drawDivScrollBar(view, paint, clipRect);
+	    }
+	    else if(view.m_type == "tabview"){
+            drawTabViewBorder(view, paint, clipRect);
+        }
+        else if(view.m_type == "label"){
+        }
+         else if(view.m_type == "radiobutton"){
+        }
+         else if(view.m_type == "checkbox"){
+        }
+    };
+    
+    /*
+     * 重置大小
+     */ 
+    var resizeAll = function() {
+        try{
+            m_canvas.width = window.innerWidth;
+            m_canvas.height = window.innerHeight;
+            //缩放高清模式
+            if (window.devicePixelRatio) {
+                m_canvas.style.width = m_canvas.width + 'px';
+                m_canvas.style.height = m_canvas.height + 'px';
+                m_canvas.height = m_canvas.height* window.devicePixelRatio;
+                m_canvas.width = m_canvas.width * window.devicePixelRatio;
+                m_context.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+            m_canvasSize = new FCSize((m_canvas.width / m_ratio / m_paint.m_scaleFactorX), (m_canvas.height / m_ratio / m_paint.m_scaleFactorY));
+            for(var i = 0; i < m_views.length; i++){
+                m_views[i].m_size = new FCSize(m_canvasSize.cx, m_canvasSize.cy);
+            }
+            updateView(m_views);
+        }catch(err){
+            //alert(err);
+        }
+        invalidate(m_paint);
+    };
+    
+    /*
+    * 键盘抬起事件
+    */
+    var onKeyUp = function(view, e){
+    };
+    
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+
+    addMouseDownEvent(m_canvas, onMouseDown);
+    addMouseMoveEvent(m_canvas, onMouseMove);
+    addMouseWheelEvent(m_canvas, onMouseWheel);
+    addMouseUpEvent(m_canvas, onMouseUp, onClick);
+    addTouchBeginEvent(m_canvas, onTouchBegin);
+    addTouchMoveEvent(m_canvas, onTouchMove);
+    addTouchEndEvent(m_canvas, onTouchEnd, onClick);
+    
+    /*
+    * 更新悬浮状态
+    * views:视图集合
+    */
+    var updateView = function(views){
+        for(var i = 0; i < views.length; i++){
+            var view = views[i];
+            if(view.m_dock == "fill"){
+                if(view.m_parent && view.m_parent.m_type != "split"){
+                    view.m_location = new FCPoint(0, 0);
+                    view.m_size = new FCSize(view.m_parent.m_size.cx, view.m_parent.m_size.cy);
+                }
+            }
+            if(view.m_type == "split"){
+                resetSplitLayoutDiv(view);
+            }else if(view.m_type == "tabview"){
+                updateTabLayout(view);
+            }else if(view.m_type == "layout"){
+                resetLayoutDiv(view);
+            }else if(view.m_type == "calendar"){
+                updateCalendar(view);
+            }
+            if(view.m_views){
+                updateView(view.m_views);
+            }
+        }
+    };
+
+    /*
+    * 设置属性
+    * view:视图
+    * node:xml节点
+    */
+    var setAttribute = function(view, node){
+        if(view.m_paint){
+            if(view.m_paint.m_defaultUIStyle == "dark"){
+                view.m_backColor = "rgb(0,0,0)";
+                view.m_borderColor = "rgb(100,100,100)";
+                view.m_textColor = "rgb(255,255,255)";
+            }else if(view.m_paint.m_defaultUIStyle == "light"){
+                view.m_backColor = "rgb(255,255,255)";
+                view.m_borderColor = "rgb(150,150,150)";
+                view.m_textColor = "rgb(0,0,0)";
+            }
+        }
+        if(!view.m_location){
+            view.m_location = new FCPoint(0, 0);
+        }
+        if(!view.m_size){
+            view.m_size = new FCSize(100, 30);
+        }
+       for(var i = 0; i < node.attributes.length; i++){
+         var name = node.attributes[i].nodeName.toLowerCase();
+         var value = node.attributes[i].nodeValue;
+         if(name && value){
+            if(name == "location"){
+                view.m_location = new FCPoint(parseInt(value.split(',')[0]), parseInt(value.split(',')[1]));
+            }else if(name == "size"){
+                view.m_size = new FCSize(parseInt(value.split(',')[0]), parseInt(value.split(',')[1]));
+            }else if(name == "text"){
+                view.m_text = value;
+            }else if(name == "backcolor"){
+                var lowerStr = value.toLowerCase();
+                if(lowerStr.indexOf("rgb") == 0){
+                    view.m_backColor = value;
+                }
+            }else if(name == "bordercolor"){
+                var lowerStr = value.toLowerCase();
+                if(lowerStr.indexOf("rgb") == 0){
+                    view.m_borderColor = value;
+                }
+            }else if(name == "textcolor"){
+                var lowerStr = value.toLowerCase();
+                if(lowerStr.indexOf("rgb") == 0){
+                    view.m_textColor = value;
+                }
+            }else if(name == "layoutstyle"){
+                view.m_layoutStyle = value;
+            }else if(name == "dock"){
+                view.m_dock = value;
+            }else if(name == "font"){
+                var family = value.split(',')[0];
+                if(family == "Default"){
+                    family = "Arial";
+                }
+                view.m_font = value.split(',')[1] + "px " + family;
+            }else if(name == "headerheight"){
+                view.m_headerHeight = parseFloat(value);
+            }else if(name == "splitmode"){
+                view.m_splitMode = value;
+            }
+            else if(name == "autowrap"){
+                view.m_autoWrap = value.toLowerCase() == "true";
+            }else if(name == "name"){
+                view.m_name = value;
+            }else if(name == "showvscrollbar"){
+                view.m_showVScrollBar = value.toLowerCase() == "true";
+                view.m_showHScrol = value.toLowerCase() == "true";
+            }else if(name == "showhscrollbar"){
+                view.m_showHScrollBar = value.toLowerCase() == "true";
+            }else if(name == "visible"){
+                view.m_visible = value.toLowerCase() == "true";
+            }else if(name == "displayoffset"){
+                view.m_visible = value.toLowerCase() == "true";
+            }else if(name == "checked"){
+                view.m_checked = value.toLowerCase() == "true";
+            }else if(name == "buttonsize"){
+                view.m_buttonSize = value.toLowerCase() == "true";
+            }else if(name == "topmost"){
+                view.m_topMost = value.toLowerCase() == "true";
+            }else if(name == "selectedindex"){
+                view.m_selectedIndex = parseInt(value);
+            }else if(name == "src"){
+                view.m_src = value;
+            }else if(name == "backimage"){
+                view.m_backImage = value;
+            }
+         }
+       }
+    };
+
+    /*
+    * 读取Xml
+    * paint 绘图对象
+    * node节点
+    * parent 父视图
+    */
+    var readXmlNode = function(paint, node, parent){
+        var subNodes = node.childNodes;       
+        for (var i = 0; i < subNodes.length; i++){ 
+            var child = subNodes[i];
+            if (child.nodeType == 1){
+                var view = null;
+                var type = "";
+                var nodeName = child.nodeName.toLowerCase();
+                if(nodeName == "div"){
+                    type = child.getAttribute("type");
+                    if(type == "splitlayout"){
+                        view = new FCSplitLayoutDiv();
+                    }
+                    else if(type == "layout"){
+                        view = new FCLayoutDiv();
+                    }
+                    else if(type == "tab"){
+                        view = new FCTabView();
+                    }
+                    else if(type == "tabpage"){
+                        view = new FCTabPage();
+                    }
+                    else{
+                        view = new FCDiv();
+                    }
+                }
+                else if(nodeName == "select"){
+                    view = new FCComboBox();
+                }
+                else if(nodeName == "input"){
+                    type = child.getAttribute("type");
+                    if(type == "radio"){
+                        view = new FCRadioButton();
+                    }
+                    else if(type == "text"){
+                        view = new FCTextBox();
+                    }
+                    else if(type == "checkbox"){
+                        view = new FCCheckBox();
+                    }else if(type == "range"){
+                        view = new FCSpin();
+                    }else if(type == "datetime"){
+                        view = new FCDatePicker();
+                    }else{
+                        view = new FCView();
+                    }
+                }
+                else if(nodeName == "chart"){
+                    view = new FCChart();
+                }
+                else if(nodeName == "img"){
+                    view = new FCImage();
+                }
+                else if(nodeName == "calendar"){
+                    view = new FCCalendar();
+                }
+                else if(nodeName == "table"){
+                    view = new FCGrid();
+                }else if(nodeName == "tree"){
+                    view = new FCTree();
+                }
+                else{
+                    view = new FCView();
+                }
+                view.m_views = new Array();
+                view.m_paint = paint;
+                view.m_parent = parent;
+                setAttribute(view, child);
+                if(nodeName == "select"){
+                    createInputComboBox(view);
+                }
+                else if(type == "text"){
+                    createInputTextBox(view);
+                }
+                else if(type == "range"){
+                    createInputTextBox(view);
+                }else if(type == "datetime"){
+                    createInputDatePicker(view);
+                }
+                if(nodeName == "label"){
+                   view.m_type = "label";
+                }
+                else if(nodeName == "calendar"){
+                    initCalendar(view);
+                    view.m_selectedDay = getYear(view.m_years, 2022).m_months.get(10).m_days.get(1);
+                    updateCalendar(view);
+                }
+                if(view){
+                    if(type == "tabpage"){
+                        var tabButton = new FCView();
+                        tabButton.m_type = "tabbutton";
+                        var atrHeaderSize = child.getAttribute("headersize");
+                        if(atrHeaderSize){
+                            tabButton.m_size = new FCSize(parseInt(atrHeaderSize.split(',')[0]), parseInt(atrHeaderSize.split(',')[1]));
+                        }else{
+                            tabButton.m_size = new FCSize(100, 20);
+                        }
+                        if(view.m_paint.m_defaultUIStyle == "dark"){
+                            tabButton.m_backColor = "rgb(0,0,0)";
+                            tabButton.m_borderColor = "rgb(100,100,100)";
+                            tabButton.m_textColor = "rgb(255,255,255)";
+                        }else if(view.m_paint.m_defaultUIStyle == "light"){
+                            tabButton.m_backColor = "rgb(255,255,255)";
+                            tabButton.m_borderColor = "rgb(150,150,150)";
+                            tabButton.m_textColor = "rgb(0,0,0)";
+                        }
+                        tabButton.m_text = view.m_text;
+                        addTabPage(view.m_parent, view, tabButton);
+                    }else{
+                        if(parent){
+                            if(!parent.m_views){
+                                parent.m_views = new Array();
+                            }
+                            parent.m_views.push(view);
+                        }else{
+                            paint.m_canvas.m_views.push(view);
+                        }
+                    }
+                    if(type == "splitlayout"){
+                         var atrDatum = child.getAttribute("datumsize");
+                        if(atrDatum){
+                            view.m_size = new FCSize(parseInt(atrDatum.split(',')[0]), parseInt(atrDatum.split(',')[1]));
+                        }
+                        var splitter = new FCView();
+                        if(view.m_paint.m_defaultUIStyle == "dark"){
+                            splitter.m_backColor = "rgb(100,100,100)";
+                        }else if(view.m_paint.m_defaultUIStyle == "light"){
+                            splitter.m_backColor = "rgb(150,150,150)";
+                        }
+                        view.m_views.push(splitter);
+                        view.m_splitter = splitter;
+                        var splitterposition = child.attributes["splitterposition"].nodeValue;
+                        var splitStr = splitterposition.split(',');
+                        if(splitStr.length >= 4){
+                            var splitRect = new FCRect(parseFloat(splitStr[0]), parseFloat(splitStr[1]), parseFloat(splitStr[2]), parseFloat(splitStr[3]));
+                            splitter.m_location = new FCPoint(splitRect.left, splitRect.top);
+                            splitter.m_size = new FCSize(splitRect.right - splitRect.left, splitRect.bottom - splitRect.top);
+                        }else{
+                            var sSize = parseFloat(splitStr[1]);
+                            var sPosition = parseFloat(splitStr[0]);
+                            if(view.m_layoutStyle == "lefttoright" || view.m_layoutStyle == "righttoleft"){
+                                splitter.m_location = new FCPoint(sPosition, 0);
+                                splitter.m_size = new FCSize(sSize, view.m_size.cy);
+                            }else{
+                                splitter.m_location = new FCPoint(0, sPosition);
+                                splitter.m_size = new FCSize(view.m_size.cx, sSize);
+                            }
+                        }
+                        readXmlNode(paint, child, view);
+                        view.m_firstView = view.m_views[1];
+                        view.m_secondView = view.m_views[2];
+                        view.m_oldSize = view.m_size;
+                        resetSplitLayoutDiv(view);
+                        
+                    }else if(type == "tab"){
+                        readXmlNode(paint, child, view);
+                        if(view.m_tabPages.length > 0){
+                            view.m_tabPages[0].m_visible = true;
+                        }
+                    }else if(nodeName == "table"){
+                        var tSubNodes = child.childNodes;       
+                        for (var n = 0; n < tSubNodes.length; n++){ 
+                            var tChild = tSubNodes[n];
+                            if (tChild.nodeType == 1){
+                                if(tChild.nodeName == "tr"){
+                                    var tsunNodes = tChild.childNodes;
+                                    for (var j = 0; j < tsunNodes.length; j++){
+                                        var sunNodeName = tsunNodes[j].nodeName.toLowerCase();
+                                        if(sunNodeName.toLowerCase() == "th"){
+                                            var gridColumn = new FCGridColumn;
+                                            gridColumn.m_width = 100;
+                                            gridColumn.m_text = tsunNodes[j].attributes["text"].nodeValue;
+                                            view.m_columns.push(gridColumn);
+                                            if(view.m_paint.m_defaultUIStyle == "light"){
+                                                gridColumn.m_backColor = "rgb(230,230,230)";
+                                                gridColumn.m_borderColor = "rgb(150,150,150)";
+                                                gridColumn.m_textColor = "rgb(0,0,0)";
+                                            }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else if(nodeName == "calendar"){
+                    initCalendar(view);
+                    view.m_selectedDay = getYear(view.m_years, 2022).m_months.get(10).m_days.get(1);
+                    updateCalendar(view);
+                }
+                else if(nodeName == "select"){
+                    var tSubNodes = child.childNodes;       
+                    for (var n = 0; n < tSubNodes.length; n++){ 
+                        var tChild = tSubNodes[n];
+                        if (tChild.nodeType == 1){
+                            if(tChild.nodeName == "option"){
+                                var optionText = tChild.getAttribute("text");
+                                var option = document.createElement('option');
+                                option.text = optionText;
+                                option.label = optionText;
+                                view.m_input.add(option, null);
+                            }
+                        }
+                    }
+                }
+                else{
+                    readXmlNode(paint, child, view);
+                }
+            }
+        }
+    }
+};
+
+var xml="<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<html xmlns=\"facecat\">\r\n  <head>\r\n  </head>\r\n  <body>\r\n    <!--主分割布局层-->\r\n    <div type=\"splitlayout\" name=\"divAll\" candragsplitter=\"true\" layoutstyle=\"toptobottom\" dock=\"fill\" size=\"400,505\" splitterposition=\"0,80,400,80\" bordercolor=\"none\">\r\n      <!--持仓页-->\r\n      <div type=\"tab\" name=\"tabTradeAccount\" bordercolor=\"none\" backcolor=\"none\">\r\n        <div type=\"tabpage\" name=\"pageTradeAccount\" text=\"持仓\" headersize=\"100,0\" backcolor=\"none\" bordercolor=\"none\" padding=\"5,5,5,5\">\r\n          <!--持仓表格-->\r\n          <table name=\"gridTradeAccount\" dock=\"fill\" headerheight=\"70\" showhscrollbar=\"false\" bordercolor=\"none\" backcolor=\"-200000000163\">\r\n            <tr>\r\n              <th name=\"colF1\" text=\"静态权益\" width=\"120\" location=\"0,0\" size=\"120,70\"/>\r\n              <th name=\"colF2\" text=\"平仓盈亏\" width=\"120\"/>\r\n              <th name=\"colF3\" text=\"浮动盈亏\" width=\"120\"/>\r\n              <th name=\"colF4\" text=\"持仓盈亏\" width=\"120\" location=\"240,0\" size=\"120,70\"/>\r\n              <th name=\"colF5\" text=\"动态权益\" width=\"120\"/>\r\n              <th name=\"colF6\" text=\"占用保证金\" width=\"120\"/>\r\n              <th name=\"colF7\" text=\"下单冻结\" width=\"120\"/>\r\n              <th name=\"colF8\" text=\"可用资金\" width=\"120\"/>\r\n              <th name=\"colF9\" text=\"风险度\" width=\"120\"/>\r\n              <th name=\"colF10\" text=\"冻结保证金\" width=\"120\"/>\r\n              <th name=\"colF11\" text=\"冻结手续费\" width=\"120\"/>\r\n              <th name=\"colF12\" text=\"手续费\" width=\"120\"/>\r\n              <th name=\"colF13\" text=\"上次结算准备金\" width=\"120\"/>\r\n              <th name=\"colF14\" text=\"上次信用额度\" width=\"120\"/>\r\n              <th name=\"colF15\" text=\"上次质押金额\" width=\"120\"/>\r\n              <th name=\"colF16\" text=\"质押金额\" width=\"120\"/>\r\n              <th name=\"colF17\" text=\"今日出金\" width=\"120\"/>\r\n              <th name=\"colF18\" text=\"今日入金\" width=\"120\"/>\r\n              <th name=\"colF19\" text=\"信用金额\" width=\"120\"/>\r\n              <th name=\"colF20\" text=\"保底资金\" width=\"120\"/>\r\n              <th name=\"colF21\" text=\"可取资金\" width=\"120\"/>\r\n            </tr>\r\n          </table>\r\n        </div>\r\n      </div>\r\n      <!--下层-->\r\n      <div type=\"splitlayout\" name=\"divBottom\" candragsplitter=\"true\" layoutstyle=\"bottomtotop\" size=\"400,450\" splitterposition=\"0,430,400,430\" bordercolor=\"none\" backcolor=\"none\">\r\n        <!--状态层-->\r\n        <div name=\"divStatus\" size=\"966,17\">\r\n          <!--交易时间标签-->\r\n          <label name=\"lblTradingTime\" text=\"--\" location=\"3,2\" size=\"100,20\" font=\"Default,12\"/>\r\n          <!--日志标签-->\r\n          <label name=\"lbllog\" text=\"--\" location=\"105,2\" size=\"352,20\" font=\"Default,12\"/>\r\n        </div>\r\n        <!--中间层-->\r\n        <div type=\"splitlayout\" name=\"divMiddle\" candragsplitter=\"true\" layoutstyle=\"toptobottom\" size=\"600,600\" splitmode=\"percentsize\" splitterposition=\"0,450,400,450\" bordercolor=\"none\" backcolor=\"none\">\r\n          <!--中间层的上层-->\r\n          <div type=\"splitlayout\" name=\"divMiddleTop\" candragsplitter=\"true\" layoutstyle=\"bottomtotop\" size=\"600,600\" splitterposition=\"0,330,400,330\" bordercolor=\"none\" backcolor=\"none\">\r\n            <div bordercolor=\"none\" padding=\"5,5,5,5\" backcolor=\"none\">\r\n              <!--委托层-->\r\n              <div type=\"splitlayout\" name=\"divMain\" dock=\"fill\" candragsplitter=\"true\" layoutstyle=\"lefttoright\" size=\"420,420\" splitterposition=\"310,0,310,300\" bordercolor=\"none\" backcolor=\"none\">\r\n                <div bordercolor=\"none\" backcolor=\"none\" padding=\"0,0,5,0\">\r\n                  <!--下单层-->\r\n                  <div type=\"tab\" name=\"tabTradeMain\" selectedindex=\"0\" location=\"0,0\" size=\"1166,270\" dock=\"fill\" bordercolor=\"-200000000193\" backcolor=\"-200000000163\">\r\n                    <div type=\"tabpage\" name=\"pageTrade\" text=\"标准下单\" backcolor=\"none\" bordercolor=\"none\">\r\n                      <!--标准下单板-->\r\n                      <div name=\"divTrade\" size=\"310,250\" dock=\"fill\" location=\"0,0\" bordercolor=\"none\" backcolor=\"none\">\r\n                        <!--合约标签-->\r\n                        <label name=\"lblContract\" text=\"合约\" location=\"8,18\" size=\"37,20\" font=\"Default,14\"/>\r\n                        <!--买卖标签-->\r\n                        <label name=\"lblBuySell\" text=\"买卖\" location=\"8,49\" size=\"38,19\" font=\"Default,14\"/>\r\n                        <!--开平标签-->\r\n                        <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnOpenCloseMode\" text=\"自动\" location=\"3,76\" size=\"46,20\"/>\r\n                        <!--手数标签-->\r\n                        <label name=\"lblVolume\" text=\"手数\" location=\"8,109\" size=\"38,19\" font=\"Default,14\"/>\r\n                        <!--开仓单选按钮-->\r\n                        <input type=\"radio\" name=\"rbOpen\" backcolor=\"rgba(43,138,195,100)\" checked=\"true\" text=\"开仓\" location=\"52,76\" size=\"65,20\" groupname=\"OpenClose\"/>\r\n                        <!--平今单选按钮-->\r\n                        <input type=\"radio\" name=\"rbCloseToday\" text=\"平今\" location=\"120,76\" size=\"65,20\" groupname=\"OpenClose\"/>\r\n                        <!--平仓单选按钮-->\r\n                        <input type=\"radio\" name=\"rbClose\" text=\"平仓\" location=\"182,76\" size=\"65,20\" groupname=\"OpenClose\"/>\r\n                        <!--买入单选按钮-->\r\n                        <input type=\"radio\" name=\"rbBuy\" backcolor=\"rgba(255,0,0,100)\" checked=\"true\" text=\"买入\" location=\"53,47\" size=\"64,20\" groupname=\"BuySell\"/>\r\n                        <!--卖出单选按钮-->\r\n                        <input type=\"radio\" name=\"rbSell\" text=\"卖出\" location=\"119,47\" size=\"64,20\" groupname=\"BuySell\"/>\r\n                        <!--证券代码输入框-->\r\n                        <input type=\"text\" name=\"txtIssueCode\" font=\"Default,20\" location=\"53,11\" size=\"163,28\" lineheight=\"28\" multiline=\"false\"/>\r\n                        <!--保值复选按钮-->\r\n                        <input type=\"checkbox\" name=\"cbLock\" text=\"锁定\" location=\"220,15\" size=\"73,20\" canfocus=\"false\" buttonsize=\"16,16\"/>\r\n                        <!--手数输入框-->\r\n                        <input type=\"range\" name=\"spinVolume\" font=\"Default,20\" digit=\"0\" location=\"52,102\" size=\"115,28\" lineheight=\"28\" maximum=\"100000000\" minimum=\"1\" textalign=\"far\"/>\r\n                        <!--价格输入框-->\r\n                        <input type=\"range\" name=\"spinPrice\" digit=\"2\" font=\"Default,20\" location=\"52,142\" size=\"115,24\" lineheight=\"28\" maximum=\"100000000\" textalign=\"far\"/>\r\n                        <!--下单按钮-->\r\n                        <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnOrder\" font=\"Default,16\" text=\"下单\" backcolor=\"rgb(15,193,118)\" location=\"8,179\" size=\"211,48\"/>\r\n                        <!--取消按钮-->\r\n                        <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnCancel\" text=\"取消\" location=\"226,184\" backcolor=\"rgb(248,73,96)\" size=\"74,24\" font=\"Default,12\"/>\r\n                        <!--预埋/条件按钮-->\r\n                        <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnPreCondition\" text=\"预埋/条件\" location=\"226,209\" size=\"74,23\" font=\"Default,12\"/>\r\n                        <!--小于等于号-->\r\n                        <label name=\"lblLess\" text=\"&lt;=\" location=\"185,104\" size=\"26,21\" font=\"Default,16\"/>\r\n                        <!--可开手数标签-->\r\n                        <label name=\"lblMaxVolume\" text=\"0\" location=\"206,104\" size=\"16,21\" font=\"Default,16\"/>\r\n                        <!--涨停价标签-->\r\n                        <label name=\"lblUp\" text=\"0\" location=\"188,121\" size=\"100,20\" opacity=\"1\"/>\r\n                        <!--价格1标签-->\r\n                        <label name=\"lblAskPrice\" text=\"0\" location=\"188,135\" size=\"53,20\"/>\r\n                        <!--价格2标签-->\r\n                        <label name=\"lblBidPrice\" text=\"0\" location=\"188,149\" size=\"51,21\"/>\r\n                        <!--跌停价标签-->\r\n                        <label name=\"lblDown\" text=\"0\" location=\"188,163\" size=\"48,20\"/>\r\n                        <!--斜杠标签1-->\r\n                        <label name=\"Label\" text=\"/\" location=\"241,136\" size=\"17,20\" font=\"Default,12\"/>\r\n                        <!--斜杠标签2-->\r\n                        <label name=\"Label1\" text=\"/\" location=\"239,150\" size=\"16,20\" font=\"Default,12\"/>\r\n                        <!--手数标签1-->\r\n                        <label name=\"lblAskVolume\" text=\"0\" location=\"250,136\" size=\"57,18\"/>\r\n                        <!--手数标签2-->\r\n                        <label name=\"lblBidVolume\" text=\"0\" location=\"250,150\" size=\"57,20\"/>\r\n                        <!--跟盘按钮-->\r\n                        <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnTradeMode\" text=\"跟盘\" location=\"3,143\" size=\"46,20\"/>\r\n                        <select name=\"ComboBox\" location=\"180,43\" size=\"100,20\" selectedindex=\"0\">\r\n                          <option text=\"常用指标\"/>\r\n                          <option text=\"大势型\"/>\r\n                          <option text=\"超买超卖型\"/>\r\n                          <option text=\"趋势型\"/>\r\n                          <option text=\"能量型\"/>\r\n                          <option text=\"成交量型\"/>\r\n                          <option text=\"均线型\"/>\r\n                          <option text=\"图表型\"/>\r\n                          <option text=\"路径型\"/>\r\n                          <option text=\"停损型\"/>\r\n                          <option text=\"其他类型\"/>\r\n                        </select>\r\n                      </div>\r\n                    </div>\r\n                    <div type=\"tabpage\" name=\"pageTradeSetting\" text=\"交易设置\" backcolor=\"none\" bordercolor=\"none\">\r\n                      <div name=\"divTradeSettings\" dock=\"fill\" backcolor=\"none\" bordercolor=\"none\">\r\n                        <!--启用快捷交易复选框-->\r\n                        <input type=\"checkbox\" name=\"cbStartFastTrading\" text=\"启用快捷交易\" location=\"171,66\" size=\"115,20\" checked=\"true\"/>\r\n                        <!--快捷交易设置按钮-->\r\n                        <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnHotKeySetting\" font=\"Default,12\" text=\"快捷交易设置\" location=\"14,59\" size=\"155,30\"/>\r\n                        <!--自动止损设置按钮-->\r\n                        <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnAutoCloseSetting\" font=\"Default,12\" text=\"自动止损设置\" location=\"14,96\" size=\"155,30\"/>\r\n                        <!--清仓/全撤设置按钮-->\r\n                        <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnAllCloseOrCancelSetting\" font=\"Default,12\" text=\"清仓/全撤设置\" location=\"14,134\" size=\"155,30\"/>\r\n                        <!--自动撤单设置按钮-->\r\n                        <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnAutoCancelSetting\" font=\"Default,12\" text=\"自动撤单设置\" location=\"14,172\" size=\"155,30\"/>\r\n                        <!--默认交易手数按钮-->\r\n                        <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnDefaultVolumeSetting\" font=\"Default,12\" text=\"默认交易手数\" location=\"14,22\" size=\"155,30\"/>\r\n                        <!--启用自动止损复选框-->\r\n                        <input type=\"checkbox\" name=\"cbStartAutoClose\" text=\"启用自动止损\" location=\"171,103\" size=\"113,20\" checked=\"true\"/>\r\n                        <!--启用自动撤单复选框-->\r\n                        <input type=\"checkbox\" name=\"cbStartAutoCancel\" text=\"启用自动撤单\" location=\"173,172\" size=\"110,21\" checked=\"true\"/>\r\n                      </div>\r\n                    </div>\r\n                  </div>\r\n                </div>\r\n                <div type=\"splitlayout\" name=\"divMain\" dock=\"fill\" candragsplitter=\"true\" layoutstyle=\"righttoleft\" size=\"420,420\" splitterposition=\"100,0\" bordercolor=\"none\" backcolor=\"none\">\r\n                  <div bordercolor=\"none\" backcolor=\"none\" padding=\"5,0,0,0\">\r\n                    <div type=\"tab\" name=\"tabOrder2\" selectedindex=\"1\" backcolor=\"-200000000163\" bordercolor=\"-200000000193\" dock=\"fill\">\r\n                      <div type=\"tabpage\" name=\"pageChart\" text=\"图形\" bordercolor=\"none\" backcolor=\"none\">\r\n                        <div type=\"splitlayout\" name=\"divChart\" dock=\"fill\" layoutstyle=\"toptobottom\" size=\"400,400\" splitterposition=\"0,30,400,30\" bordercolor=\"none\" backcolor=\"none\">\r\n                          <div bordercolor=\"none\" backcolor=\"none\">\r\n                            <label name=\"lblKLineCode\" text=\"cu1906\" location=\"10,7\" size=\"56,22\" font=\"Default,14\"/>\r\n                            <input type=\"radio\" name=\"rbday\" text=\"日线\" location=\"427,6\" size=\"68,20\"/>\r\n                            <input type=\"radio\" name=\"rb5m\" text=\"5分钟\" location=\"104,6\" size=\"72,20\" checked=\"True\"/>\r\n                            <input type=\"radio\" name=\"rb15m\" text=\"15分钟\" location=\"181,6\" size=\"74,20\"/>\r\n                            <input type=\"radio\" name=\"rb30m\" text=\"30分钟\" location=\"262,6\" size=\"70,20\"/>\r\n                            <input type=\"radio\" name=\"rb60m\" text=\"60分钟\" location=\"341,6\" size=\"75,20\"/>\r\n                          </div>\r\n                          <chart name=\"chart\" dock=\"fill\"/>\r\n                        </div>\r\n                      </div>\r\n                    </div>\r\n                  </div>\r\n                  <!--下单页夹-->\r\n                  <div type=\"tab\" name=\"tabOrder\" selectedindex=\"1\" backcolor=\"-200000000163\" bordercolor=\"-200000000193\">\r\n                    <!--未成交单页-->\r\n                    <div type=\"tabpage\" name=\"pageNoTrade\" text=\"未成交单\" backcolor=\"none\" bordercolor=\"none\">\r\n                      <!--未成交单分割层-->\r\n                      <div type=\"splitlayout\" name=\"divNoTrade\" dock=\"fill\" layoutstyle=\"righttoleft\" size=\"400,400\" splitterposition=\"320,0,320,400\" backcolor=\"none\" bordercolor=\"none\">\r\n                        <div name=\"divCancelOrder\" location=\"285,0\" size=\"78,338\" backcolor=\"none\" bordercolor=\"none\">\r\n                          <!--撤单单选按钮-->\r\n                          <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnCancelOrder\" checked=\"true\" size=\"60,60\" text=\"撤单\" location=\"7,12\"/>\r\n                          <!--全撤单选按钮-->\r\n                          <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnCancelAllOrders\" location=\"7,75\" size=\"60,60\" text=\"全撤\"/>\r\n                        </div>\r\n                        <!--未成交单表格-->\r\n                        <table name=\"gridNoTrade\" location=\"122,50\" size=\"209,248\" backcolor=\"none\" bordercolor=\"none\">\r\n                          <tr>\r\n                            <th name=\"colU11\" columntype=\"no\" horizontalalign=\"far\" text=\"序列号\" allowsort=\"false\" width=\"80\"/>\r\n                            <th name=\"colU1\" columntype=\"text\" text=\"报单编号\" width=\"80\"/>\r\n                            <th name=\"colU2\" columntype=\"text\" text=\"合约\" width=\"80\"/>\r\n                            <th name=\"colU3\" columntype=\"text\" horizontalalign=\"center\" text=\"买卖\" width=\"60\"/>\r\n                            <th name=\"colU4\" columntype=\"text\" horizontalalign=\"center\" text=\"开平\" width=\"60\"/>\r\n                            <th name=\"colU5\" columntype=\"int\" horizontalalign=\"far\" text=\"报单手数\" width=\"80\"/>\r\n                            <th name=\"colU6\" columntype=\"int\" horizontalalign=\"far\" text=\"未成交手数\" width=\"80\"/>\r\n                            <th name=\"colU7\" columntype=\"double\" horizontalalign=\"far\" text=\"报单价格\" width=\"80\"/>\r\n                            <th name=\"colU8\" columntype=\"text\" horizontalalign=\"center\" text=\"报单时间\" width=\"80\"/>\r\n                            <th name=\"colU9\" columntype=\"double\" horizontalalign=\"far\" text=\"冻结保证金\" width=\"80\"/>\r\n                            <th name=\"colU10\" columntype=\"double\" horizontalalign=\"far\" text=\"冻结手续费\" width=\"80\"/>\r\n                            <th name=\"colU12\" columntype=\"text\" text=\"交易所\" width=\"80\"/>\r\n                            <th name=\"colU13\" columntype=\"text\" horizontalalign=\"center\" text=\"投保\" width=\"60\"/>\r\n                            <th name=\"colU14\" columntype=\"int\" horizontalalign=\"far\" text=\"成交手数\" width=\"60\"/>\r\n                            <th name=\"colU15\" columntype=\"text\" text=\"报单价格条件\" width=\"100\"/>\r\n                            <th name=\"colU16\" columntype=\"text\" text=\"有效期类型\" width=\"100\"/>\r\n                            <th name=\"colU17\" columntype=\"text\" text=\"报单类型\" width=\"80\"/>\r\n                            <th name=\"colU18\" columntype=\"text\" horizontalalign=\"center\" text=\"最后成交时间\" width=\"100\"/>\r\n                            <th name=\"colU19\" columntype=\"double\" text=\"成交均价\" width=\"80\"/>\r\n                            <th name=\"colU20\" columntype=\"text\" horizontalalign=\"center\" text=\"是否强平\" width=\"80\"/>\r\n                            <th name=\"colU21\" columntype=\"text\" text=\"强平原因\" width=\"80\"/>\r\n                            <th name=\"colU22\" columntype=\"text\" text=\"指令结果\" width=\"80\"/>\r\n                            <th name=\"colU23\" columntype=\"text\" text=\"挂单状态\" width=\"200\"/>\r\n                            <th name=\"colU24\" columntype=\"text\" text=\"详细状态\" width=\"80\"/>\r\n                            <th name=\"colU25\" columntype=\"text\" text=\"客户端信息\" width=\"100\"/>\r\n                            <th name=\"colU26\" columntype=\"text\" text=\"撤单锁定\" width=\"80\"/>\r\n                          </tr>\r\n                        </table>\r\n                      </div>\r\n                    </div>\r\n                    <!--所有委托单页-->\r\n                    <div type=\"tabpage\" name=\"pageAllOrders\" text=\"所有委托单\" backcolor=\"none\" bordercolor=\"none\">\r\n                      <div type=\"splitlayout\" name=\"divOrder\" dock=\"fill\" layoutstyle=\"bottomtotop\" size=\"400,400\" splitterposition=\"0,370,400,370\" backcolor=\"none\" bordercolor=\"none\">\r\n                        <div name=\"divDealRecordType\" backcolor=\"none\" bordercolor=\"none\">\r\n                          <!--全部单单选按钮-->\r\n                          <input type=\"radio\" name=\"rdAllOrders\" groupname=\"allOrders\" checked=\"true\" location=\"0,6\" text=\"全部单\" size=\"100,20\"/>\r\n                          <!--挂单单选按钮-->\r\n                          <input type=\"radio\" name=\"rdOrder\" groupname=\"allOrders\" location=\"100,6\" text=\"挂单\" size=\"100,20\"/>\r\n                          <!--已成交单选按钮-->\r\n                          <input type=\"radio\" name=\"rdDeal\" groupname=\"allOrders\" location=\"200,6\" text=\"已成交\" size=\"100,20\"/>\r\n                          <!--已撤单单选按钮-->\r\n                          <input type=\"radio\" name=\"rdCancel\" groupname=\"allOrders\" location=\"300,6\" text=\"已撤单/错单\" size=\"120,20\"/>\r\n                          <!--撤单按钮-->\r\n                          <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnCancelOrder2\" location=\"450,2\" size=\"100,26\" text=\"撤单\"/>\r\n                          <!--全撤按钮-->\r\n                          <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnCancelAllOrder2\" location=\"570,2\" size=\"100,26\" text=\"全撤\"/>\r\n                        </div>\r\n                        <!--所有委托单表格-->\r\n                        <table name=\"gridOrder\" dock=\"Fill\" size=\"569,330\" backcolor=\"none\" bordercolor=\"none\">\r\n                          <tr>\r\n                            <th name=\"colA17\" columntype=\"no\" horizontalalign=\"far\" text=\"序列号\" allowsort=\"false\" width=\"80\"/>\r\n                            <th name=\"colA1\" columntype=\"text\" text=\"报单编号\" width=\"80\"/>\r\n                            <th name=\"colA2\" columntype=\"text\" text=\"合约\" width=\"80\"/>\r\n                            <th name=\"colA3\" columntype=\"text\" horizontalalign=\"center\" text=\"买卖\" width=\"60\"/>\r\n                            <th name=\"colA4\" columntype=\"text\" horizontalalign=\"center\" text=\"开平\" width=\"60\"/>\r\n                            <th name=\"colA5\" columntype=\"text\" horizontalalign=\"center\" text=\"挂单状态\" width=\"140\"/>\r\n                            <th name=\"colA6\" columntype=\"double\" horizontalalign=\"far\" text=\"报单价格\" width=\"80\"/>\r\n                            <th name=\"colA7\" columntype=\"int\" horizontalalign=\"far\" text=\"报单手数\" width=\"80\"/>\r\n                            <th name=\"colA8\" columntype=\"int\" horizontalalign=\"far\" text=\"未成交手数\" width=\"80\"/>\r\n                            <th name=\"colA9\" columntype=\"int\" horizontalalign=\"far\" text=\"成交手数\" width=\"80\"/>\r\n                            <th name=\"colA10\" columntype=\"text\" horizontalalign=\"center\" text=\"报单时间\" width=\"60\"/>\r\n                            <th name=\"colA11\" columntype=\"text\" horizontalalign=\"center\" text=\"最后成交时间\" width=\"80\"/>\r\n                            <th name=\"colA12\" columntype=\"double\" horizontalalign=\"far\" text=\"成交均价\" width=\"80\"/>\r\n                            <th name=\"colA13\" columntype=\"double\" horizontalalign=\"far\" text=\"冻结保证金\" width=\"80\"/>\r\n                            <th name=\"colA14\" columntype=\"double\" horizontalalign=\"far\" text=\"冻结手续费\" width=\"80\"/>\r\n                            <th name=\"colA15\" columntype=\"text\" horizontalalign=\"center\" text=\"投保\" width=\"60\"/>\r\n                            <th name=\"colA16\" columntype=\"text\" text=\"交易所\" width=\"80\"/>\r\n                            <th name=\"colA18\" columntype=\"text\" horizontalalign=\"center\" text=\"报单价格条件\" width=\"100\"/>\r\n                            <th name=\"colA19\" columntype=\"text\" text=\"有效期类型\" width=\"200\"/>\r\n                            <th name=\"colA20\" columntype=\"text\" horizontalalign=\"center\" text=\"报单类型\" width=\"60\"/>\r\n                            <th name=\"colA21\" columntype=\"text\" horizontalalign=\"center\" text=\"是否强平\" width=\"80\"/>\r\n                            <th name=\"colA22\" columntype=\"text\" horizontalalign=\"center\" text=\"强平原因\" width=\"80\"/>\r\n                            <th name=\"colA23\" columntype=\"text\" text=\"指令结果\" width=\"80\"/>\r\n                            <th name=\"colA24\" columntype=\"text\" text=\"客户端信息\" width=\"80\"/>\r\n                            <th name=\"colA25\" columntype=\"text\" text=\"撤单锁定\" width=\"60\"/>\r\n                          </tr>\r\n                        </table>\r\n                      </div>\r\n                    </div>\r\n                    <!--预埋单条件单页-->\r\n                    <div type=\"tabpage\" name=\"pageParkedOrder\" text=\"预埋单条件单\" backcolor=\"none\" bordercolor=\"none\">\r\n                      <div type=\"splitlayout\" name=\"divParkedOrder\" dock=\"fill\" layoutstyle=\"bottomtotop\" size=\"400,400\" splitterposition=\"0,350,400,350\" backcolor=\"none\" bordercolor=\"none\">\r\n                        <div name=\"divDealRecordType\" location=\"-1,200\" backcolor=\"none\" bordercolor=\"none\">\r\n                          <!--全部单选按钮-->\r\n                          <input type=\"radio\" name=\"rdAllCondition\" groupname=\"condition\" checked=\"true\" location=\"0,4\" text=\"全部\" size=\"100,20\"/>\r\n                          <!--预埋单选按钮-->\r\n                          <input type=\"radio\" name=\"rdPreCondition\" groupname=\"condition\" location=\"80,4\" text=\"预埋\" size=\"100,20\"/>\r\n                          <!--条件单选按钮-->\r\n                          <input type=\"radio\" name=\"rdCondition\" groupname=\"condition\" location=\"160,4\" text=\"条件\" size=\"100,20\"/>\r\n                          <!--已发送单选按钮-->\r\n                          <input type=\"radio\" name=\"rdSend\" groupname=\"condition\" location=\"240,4\" text=\"已发送\" size=\"100,20\"/>\r\n                          <!--删除按钮-->\r\n                          <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnDeleteCondition\" location=\"320,2\" size=\"100,26\" text=\"删除\"/>\r\n                          <!--立即发出按钮-->\r\n                          <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnSendCondition\" location=\"424,2\" size=\"100,26\" text=\"立即发出\"/>\r\n                          <!--清空已发送按钮-->\r\n                          <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnClearCondition\" location=\"528,2\" size=\"100,26\" text=\"清空已发送\"/>\r\n                          <!--注意标签-->\r\n                          <label name=\"lblConditionTip\" textcolor=\"rgba(255,0,0,255)\" location=\"10,30\" size=\"500,20\" text=\"注意：如果关闭本软件或网络断线，未发出的预埋和本地条件单将失效\"/>\r\n                        </div>\r\n                        <!--预埋单表格-->\r\n                        <table name=\"gridParkedOrder\" backcolor=\"none\" bordercolor=\"none\">\r\n                          <tr>\r\n                            <th name=\"colI1\" columntype=\"text\" text=\"类型\" width=\"100\"/>\r\n                            <th name=\"colI2\" columntype=\"text\" text=\"状态\" width=\"80\"/>\r\n                            <th name=\"colI3\" columntype=\"text\" text=\"触发条件\" width=\"250\"/>\r\n                            <th name=\"colI4\" columntype=\"text\" text=\"合约\" width=\"60\"/>\r\n                            <th name=\"colI5\" columntype=\"text\" horizontalalign=\"center\" text=\"买卖\" width=\"80\"/>\r\n                            <th name=\"colI6\" columntype=\"text\" horizontalalign=\"center\" text=\"开平\" width=\"80\"/>\r\n                            <th name=\"colI7\" columntype=\"double\" horizontalalign=\"far\" text=\"报单价格\" width=\"80\"/>\r\n                            <th name=\"colI8\" columntype=\"int\" horizontalalign=\"far\" text=\"报单手数\" width=\"80\"/>\r\n                            <th name=\"colI9\" columntype=\"text\" horizontalalign=\"center\" text=\"投保\" width=\"80\"/>\r\n                            <th name=\"colI10\" columntype=\"text\" text=\"交易所\" width=\"60\"/>\r\n                            <th name=\"colI11\" columntype=\"text\" horizontalalign=\"center\" text=\"预埋时间\" width=\"80\"/>\r\n                            <th name=\"colI12\" columntype=\"text\" horizontalalign=\"center\" text=\"预埋单编号\" width=\"120\"/>\r\n                          </tr>\r\n                        </table>\r\n                      </div>\r\n                    </div>\r\n                    <!--成交记录页-->\r\n                    <div type=\"tabpage\" name=\"pageTradeRecord\" text=\"成交记录\" backcolor=\"none\" bordercolor=\"none\">\r\n                      <div type=\"splitlayout\" name=\"divTradeRecord\" dock=\"fill\" layoutstyle=\"bottomtotop\" size=\"400,400\" splitterposition=\"0,370,400,370\" backcolor=\"none\" bordercolor=\"none\">\r\n                        <div name=\"divTradeRecordType\" backcolor=\"none\" bordercolor=\"none\">\r\n                          <!--明细单选按钮-->\r\n                          <input type=\"radio\" name=\"rdDetail\" groupname=\"tradeRecordType\" checked=\"true\" location=\"0,5\" text=\"明细\" size=\"100,20\"/>\r\n                          <!--合计单选按钮-->\r\n                          <input type=\"radio\" name=\"rdSummary\" groupname=\"tradeRecordType\" location=\"100,5\" text=\"合计\" size=\"100,20\"/>\r\n                        </div>\r\n                        <div name=\"divTradeRecordInner\" backcolor=\"none\" bordercolor=\"none\">\r\n                          <!--成交记录表格-->\r\n                          <table name=\"gridTradeRecord\" dock=\"fill\" backcolor=\"none\" bordercolor=\"none\">\r\n                            <tr>\r\n                              <th name=\"colR1\" columntype=\"text\" text=\"成交编号\" width=\"80\"/>\r\n                              <th name=\"colR2\" columntype=\"text\" text=\"合约\" width=\"80\"/>\r\n                              <th name=\"colR3\" columntype=\"text\" horizontalalign=\"center\" text=\"买卖\" width=\"60\"/>\r\n                              <th name=\"colR4\" columntype=\"text\" horizontalalign=\"center\" text=\"开平\" width=\"60\"/>\r\n                              <th name=\"colR5\" columntype=\"double\" horizontalalign=\"far\" text=\"成交价格\" width=\"80\"/>\r\n                              <th name=\"colR6\" columntype=\"int\" horizontalalign=\"far\" text=\"成交手数\" width=\"80\"/>\r\n                              <th name=\"colR7\" columntype=\"text\" horizontalalign=\"center\" text=\"成交时间\" width=\"80\"/>\r\n                              <th name=\"colR8\" columntype=\"text\" horizontalalign=\"center\" text=\"报单编号\" width=\"80\"/>\r\n                              <th name=\"colR9\" columntype=\"text\" horizontalalign=\"center\" text=\"成交类型\" width=\"80\"/>\r\n                              <th name=\"colR10\" columntype=\"text\" horizontalalign=\"center\" text=\"投保\" width=\"60\"/>\r\n                              <th name=\"colR11\" columntype=\"text\" text=\"交易所\" width=\"80\"/>\r\n                              <th name=\"colR12\" columntype=\"double\" horizontalalign=\"far\" text=\"手续费\" width=\"80\"/>\r\n                            </tr>\r\n                          </table>\r\n                          <!--成交统计表格-->\r\n                          <table name=\"gridTradeStatistics\" dock=\"fill\" visible=\"false\" backcolor=\"none\" bordercolor=\"none\">\r\n                            <tr>\r\n                              <th name=\"colS1\" columntype=\"text\" text=\"合约\" width=\"80\"/>\r\n                              <th name=\"colS2\" columntype=\"text\" text=\"交易所\" width=\"80\"/>\r\n                              <th name=\"colS3\" columntype=\"text\" horizontalalign=\"center\" text=\"买卖\" width=\"80\"/>\r\n                              <th name=\"colS4\" columntype=\"text\" horizontalalign=\"center\" text=\"开平\" width=\"80\"/>\r\n                              <th name=\"colS5\" columntype=\"double\" horizontalalign=\"far\" text=\"成交均价\" width=\"100\"/>\r\n                              <th name=\"colS6\" columntype=\"int\" horizontalalign=\"far\" text=\"成交手数\" width=\"100\"/>\r\n                              <th name=\"colS7\" columntype=\"double\" horizontalalign=\"far\" text=\"手续费\" width=\"100\"/>\r\n                              <th name=\"colS8\" columntype=\"text\" horizontalalign=\"center\" text=\"投保\" width=\"60\"/>\r\n                            </tr>\r\n                          </table>\r\n                        </div>\r\n                      </div>\r\n                    </div>\r\n                  </div>\r\n                </div>\r\n              </div>\r\n            </div>\r\n            <div bordercolor=\"none\" backcolor=\"none\" padding=\"5,5,5,5\">\r\n              <!--行情页夹-->\r\n              <div type=\"tab\" name=\"tabQuote\" selectedindex=\"0\" size=\"400,400\" backcolor=\"-200000000163\" dock=\"fill\" bordercolor=\"-200000000193\">\r\n                <!--合约层-->\r\n                <div type=\"layout\" name=\"divUList\" bordercolor=\"none\" backcolor=\"none\" dock=\"top\" layoutstyle=\"righttoleft\" size=\"400,20\"/>\r\n                <!--报价表页-->\r\n                <div type=\"tabpage\" name=\"pagePageQuote\" text=\"报价表\" bordercolor=\"none\" backcolor=\"none\">\r\n                  <!--行情表格-->\r\n                  <table name=\"gridLatestData\" dock=\"fill\" location=\"0,0\" size=\"914,160\" bordercolor=\"none\" backcolor=\"none\">\r\n                    <tr>\r\n                      <th name=\"colQ1\" columntype=\"text\" text=\"合约\" width=\"80\"/>\r\n                      <th name=\"colQ2\" columntype=\"text\" text=\"合约名\" width=\"100\"/>\r\n                      <th name=\"colQ3\" columntype=\"double\" horizontalalign=\"far\" text=\"最新价\" width=\"60\"/>\r\n                      <th name=\"colQ4\" columntype=\"double\" horizontalalign=\"far\" text=\"涨跌\" width=\"60\"/>\r\n                      <th name=\"colQ5\" columntype=\"double\" horizontalalign=\"far\" text=\"买价\" width=\"60\" location=\"300,0\" size=\"60,20\"/>\r\n                      <th name=\"colQ6\" columntype=\"int\" horizontalalign=\"far\" text=\"买量\" width=\"60\" location=\"360,0\" size=\"60,20\"/>\r\n                      <th name=\"colQ7\" columntype=\"double\" horizontalalign=\"far\" text=\"卖价\" width=\"60\"/>\r\n                      <th name=\"colQ8\" columntype=\"int\" horizontalalign=\"far\" text=\"卖量\" width=\"60\"/>\r\n                      <th name=\"colQ9\" columntype=\"int\" horizontalalign=\"far\" text=\"成交量\" width=\"60\"/>\r\n                      <th name=\"colQ10\" columntype=\"int\" horizontalalign=\"far\" text=\"持仓量\" width=\"60\"/>\r\n                      <th name=\"colQ11\" columntype=\"double\" horizontalalign=\"far\" text=\"涨停价\" width=\"60\"/>\r\n                      <th name=\"colQ12\" columntype=\"double\" horizontalalign=\"far\" text=\"涨停价\" width=\"60\"/>\r\n                      <th name=\"colQ13\" columntype=\"double\" horizontalalign=\"far\" text=\"今开盘\" width=\"60\"/>\r\n                      <th name=\"colQ14\" columntype=\"double\" horizontalalign=\"far\" text=\"昨结算\" width=\"60\"/>\r\n                      <th name=\"colQ15\" columntype=\"double\" horizontalalign=\"far\" text=\"最高价\" width=\"60\"/>\r\n                      <th name=\"colQ16\" columntype=\"double\" horizontalalign=\"far\" text=\"最低价\" width=\"60\"/>\r\n                      <th name=\"colQ17\" columntype=\"int\" horizontalalign=\"far\" text=\"现量\" width=\"60\"/>\r\n                      <th name=\"colQ18\" columntype=\"percent\" horizontalalign=\"far\" text=\"涨跌幅\" width=\"60\"/>\r\n                      <th name=\"colQ19\" columntype=\"double\" horizontalalign=\"far\" text=\"昨收盘\" width=\"60\"/>\r\n                      <th name=\"colQ20\" columntype=\"thousands\" horizontalalign=\"far\" text=\"成交额\" width=\"100\"/>\r\n                      <th name=\"colQ21\" columntype=\"text\" text=\"交易所\" width=\"60\"/>\r\n                      <th name=\"colQ22\" columntype=\"text\" horizontalalign=\"center\" text=\"行情更新时间\" width=\"100\"/>\r\n                      <th name=\"colQ23\" columntype=\"double\" text=\"昨持仓量\" width=\"60\"/>\r\n                      <th name=\"colQ24\" columntype=\"double\" text=\"今收盘\" width=\"60\"/>\r\n                      <th name=\"colQ25\" columntype=\"double\" text=\"结算价\" width=\"60\"/>\r\n                      <th name=\"colQ26\" columntype=\"double\" text=\"当日均价\" width=\"80\"/>\r\n                      <th name=\"colQ27\" columntype=\"int\" text=\"持仓增减\" width=\"80\"/>\r\n                      <th name=\"colQ28\" columntype=\"double\" text=\"组合买价\" width=\"80\"/>\r\n                      <th name=\"colQ29\" columntype=\"int\" text=\"组合买量\" width=\"80\"/>\r\n                      <th name=\"colQ30\" columntype=\"double\" text=\"组合卖价\" width=\"80\"/>\r\n                      <th name=\"colQ31\" columntype=\"int\" text=\"组合卖量\" width=\"80\"/>\r\n                      <th name=\"colQ32\" columntype=\"int\" text=\"撤单次数\" width=\"80\"/>\r\n                    </tr>\r\n                  </table>\r\n                </div>\r\n                <!--合约列表页-->\r\n                <div type=\"tabpage\" name=\"pageContracts\" text=\"合约列表\" bordercolor=\"none\" backcolor=\"none\">\r\n                  <!--合约列表表格-->\r\n                  <table name=\"gridContracts\" dock=\"fill\" bordercolor=\"none\" backcolor=\"none\">\r\n                    <tr>\r\n                      <th name=\"colC1\" columntype=\"text\" text=\"品种代码\" width=\"80\"/>\r\n                      <th name=\"colC2\" columntype=\"text\" text=\"合约\" width=\"60\"/>\r\n                      <th name=\"colC3\" columntype=\"text\" text=\"合约名\" width=\"100\"/>\r\n                      <th name=\"colC4\" columntype=\"text\" text=\"交易所\" width=\"60\"/>\r\n                      <th name=\"colC5\" columntype=\"int\" horizontalalign=\"far\" text=\"合约乘数\" width=\"100\"/>\r\n                      <th name=\"colC6\" columntype=\"double\" horizontalalign=\"far\" text=\"最小价格变动单位\" width=\"100\"/>\r\n                      <th name=\"colC7\" columntype=\"text\" horizontalalign=\"center\" text=\"品种类型\" width=\"100\"/>\r\n                      <th name=\"colC8\" columntype=\"text\" horizontalalign=\"center\" text=\"最后日期\" width=\"100\"/>\r\n                      <th name=\"colC9\" columntype=\"percent\" horizontalalign=\"far\" text=\"多头保证金率\" width=\"100\"/>\r\n                      <th name=\"colC10\" columntype=\"percent\" horizontalalign=\"far\" text=\"空头保证金率\" width=\"100\"/>\r\n                      <th name=\"colC11\" columntype=\"double\" horizontalalign=\"far\" text=\"开仓手续费\" width=\"100\"/>\r\n                      <th name=\"colC12\" columntype=\"double\" horizontalalign=\"far\" text=\"平仓手续费\" width=\"100\"/>\r\n                      <th name=\"colC13\" columntype=\"double\" horizontalalign=\"far\" text=\"平今手续费\" width=\"100\"/>\r\n                      <th name=\"colC14\" columntype=\"percent\" horizontalalign=\"far\" text=\"开仓手续费率\" width=\"100\"/>\r\n                      <th name=\"colC15\" columntype=\"percent\" horizontalalign=\"far\" text=\"平仓手续费率\" width=\"100\"/>\r\n                      <th name=\"colC16\" columntype=\"percent\" horizontalalign=\"far\" text=\"平今手续费率\" width=\"100\"/>\r\n                      <th name=\"colC17\" columntype=\"int\" horizontalalign=\"far\" text=\"市价单最大下单量\" width=\"100\"/>\r\n                      <th name=\"colC18\" columntype=\"int\" horizontalalign=\"far\" text=\"限价单最大下单量\" width=\"100\"/>\r\n                    </tr>\r\n                  </table>\r\n                </div>\r\n              </div>\r\n            </div>\r\n          </div>\r\n          <div bordercolor=\"none\" padding=\"5,5,5,5\" backcolor=\"-200000000163\">\r\n            <!--持仓页夹-->\r\n            <div type=\"tab\" name=\"tabInvestorPosition\" selectedindex=\"0\" dock=\"fill\" bordercolor=\"-200000000193\" backcolor=\"none\">\r\n              <!--持仓页-->\r\n              <div type=\"tabpage\" name=\"pagePageInvestorPosition\" text=\"持仓\" bordercolor=\"none\" backcolor=\"none\">\r\n                <div type=\"splitlayout\" name=\"divInvestorPosition\" dock=\"fill\" layoutstyle=\"bottomtotop\" size=\"400,400\" splitterposition=\"0,370,400,370\" bordercolor=\"none\" backcolor=\"none\">\r\n                  <!--持仓下层-->\r\n                  <div name=\"divInvestorPositionBottom\" bordercolor=\"none\" backcolor=\"none\">\r\n                    <!--持仓单选按钮-->\r\n                    <input type=\"radio\" name=\"cbInvestorPosition\" checked=\"true\" location=\"5,5\" groupname=\"InvestorPosition\" size=\"80,20\" text=\"持仓\"/>\r\n                    <!--持仓明细单选按钮-->\r\n                    <input type=\"radio\" name=\"cbInvestorPositionDetail\" groupname=\"InvestorPosition\" location=\"80,5\" size=\"80,20\" text=\"持仓明细\"/>\r\n                    <!--组合持仓按钮-->\r\n                    <input type=\"radio\" name=\"cbCompPosition\" groupname=\"InvestorPosition\" location=\"180,3\" size=\"80,23\" text=\"组合持仓\" visible=\"false\"/>\r\n                    <!--对价平仓按钮-->\r\n                    <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnOpenInterestIP\" location=\"300,3\" size=\"80,23\" text=\"对价平仓\" height=\"24\"/>\r\n                    <!--市价平仓按钮-->\r\n                    <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnMarketPositionIP\" location=\"390,3\" size=\"80,23\" text=\"市价平仓\" height=\"24\"/>\r\n                    <!--市价反手按钮-->\r\n                    <input type=\"custom\" cid=\"ribbonbutton2\" name=\"btnMarketBackhandIP\" location=\"480,3\" size=\"80,23\" text=\"市价反手\" height=\"24\"/>\r\n                  </div>\r\n                  <!--持仓上层-->\r\n                  <div name=\"divInvestorPositionTop\" bordercolor=\"none\" backcolor=\"none\">\r\n                    <!--持仓查询表格-->\r\n                    <table name=\"gridInvestorPosition\" dock=\"fill\" bordercolor=\"none\" backcolor=\"none\">\r\n                      <tr>\r\n                        <th name=\"colP1\" columntype=\"text\" text=\"合约\" width=\"80\"/>\r\n                        <th name=\"colP2\" columntype=\"text\" horizontalalign=\"center\" text=\"多空\" width=\"60\"/>\r\n                        <th name=\"colP3\" columntype=\"int\" horizontalalign=\"far\" text=\"总持仓\" width=\"60\"/>\r\n                        <th name=\"colP4\" columntype=\"int\" horizontalalign=\"far\" text=\"昨仓\" width=\"60\"/>\r\n                        <th name=\"colP5\" columntype=\"int\" horizontalalign=\"far\" text=\"今仓\" width=\"60\"/>\r\n                        <th name=\"colP6\" columntype=\"int\" horizontalalign=\"far\" text=\"可平量\" width=\"60\"/>\r\n                        <th name=\"colP7\" columntype=\"double\" horizontalalign=\"far\" text=\"持仓均价\" width=\"80\"/>\r\n                        <th name=\"colP8\" columntype=\"thousands\" horizontalalign=\"far\" text=\"持仓盈亏\" width=\"150\"/>\r\n                        <th name=\"colP9\" columntype=\"thousands\" horizontalalign=\"far\" text=\"占用保证金\" width=\"100\"/>\r\n                        <th name=\"colP10\" columntype=\"text\" horizontalalign=\"center\" text=\"投保\" width=\"60\"/>\r\n                        <th name=\"col111\" columntype=\"text\" text=\"交易所\" width=\"80\"/>\r\n                        <th name=\"colP12\" columntype=\"int\" horizontalalign=\"far\" text=\"总多仓\" width=\"60\"/>\r\n                        <th name=\"colP13\" columntype=\"int\" horizontalalign=\"far\" text=\"总空仓\" width=\"60\"/>\r\n                        <th name=\"colP14\" columntype=\"int\" horizontalalign=\"far\" text=\"今多仓\" width=\"60\"/>\r\n                        <th name=\"colP15\" columntype=\"int\" horizontalalign=\"far\" text=\"今空仓\" width=\"60\"/>\r\n                        <th name=\"colP16\" columntype=\"int\" horizontalalign=\"far\" text=\"总可平今量\" width=\"100\"/>\r\n                        <th name=\"colP17\" columntype=\"int\" horizontalalign=\"far\" text=\"总可平仓量\" width=\"100\"/>\r\n                        <th name=\"colP18\" columntype=\"int\" horizontalalign=\"far\" text=\"平今挂单量\" width=\"100\"/>\r\n                        <th name=\"colP19\" columntype=\"int\" horizontalalign=\"far\" text=\"平仓挂单量\" width=\"100\"/>\r\n                        <th name=\"colP20\" columntype=\"int\" horizontalalign=\"far\" text=\"组合冻结量\" width=\"100\"/>\r\n                        <th name=\"colP21\" columntype=\"int\" horizontalalign=\"far\" text=\"可平今量\" width=\"80\"/>\r\n                        <th name=\"col122\" columntype=\"int\" horizontalalign=\"far\" text=\"可平仓量\" width=\"80\"/>\r\n                        <th name=\"colP23\" columntype=\"double\" horizontalalign=\"far\" text=\"开仓均价\" width=\"100\"/>\r\n                        <th name=\"colP24\" columntype=\"double\" horizontalalign=\"far\" text=\"多头开仓价\" width=\"100\"/>\r\n                        <th name=\"colP25\" columntype=\"double\" horizontalalign=\"far\" text=\"空头开仓价\" width=\"100\"/>\r\n                        <th name=\"colP26\" columntype=\"thousands\" horizontalalign=\"far\" text=\"浮动盈亏\" width=\"100\"/>\r\n                        <th name=\"colP27\" columntype=\"thousands\" horizontalalign=\"far\" text=\"总盈亏\" width=\"80\"/>\r\n                        <th name=\"colP28\" columntype=\"int\" horizontalalign=\"far\" text=\"今开仓量\" width=\"80\"/>\r\n                        <th name=\"colP29\" columntype=\"int\" horizontalalign=\"far\" text=\"今平仓量\" width=\"80\"/>\r\n                        <th name=\"colP30\" columntype=\"double\" horizontalalign=\"far\" text=\"现价\" width=\"80\"/>\r\n                        <th name=\"colP31\" columntype=\"double\" horizontalalign=\"far\" text=\"最新差价\" width=\"80\"/>\r\n                        <th name=\"colP32\" columntype=\"text\" text=\"对锁\" width=\"100\"/>\r\n                        <th name=\"colP33\" columntype=\"text\" text=\"止盈\" width=\"100\"/>\r\n                        <th name=\"colP34\" columntype=\"text\" text=\"止损\" width=\"100\"/>\r\n                      </tr>\r\n                    </table>\r\n                    <!--持仓明细表格-->\r\n                    <table name=\"gridInvestorPositionDetail\" dock=\"fill\" visible=\"false\" bordercolor=\"none\" backcolor=\"none\">\r\n                      <tr>\r\n                        <th name=\"colT1\" columntype=\"text\" text=\"成交编号\" width=\"80\"/>\r\n                        <th name=\"colT2\" columntype=\"text\" text=\"合约\" width=\"80\"/>\r\n                        <th name=\"colT3\" columntype=\"text\" horizontalalign=\"center\" text=\"多空\" width=\"60\"/>\r\n                        <th name=\"colT4\" columntype=\"int\" horizontalalign=\"far\" text=\"手数\" width=\"60\"/>\r\n                        <th name=\"colT5\" columntype=\"double\" horizontalalign=\"far\" text=\"开仓价\" width=\"80\"/>\r\n                        <th name=\"colT6\" columntype=\"thousands\" horizontalalign=\"far\" text=\"占用保证金\" width=\"100\"/>\r\n                        <th name=\"colT7\" columntype=\"text\" text=\"持仓类型\" width=\"80\"/>\r\n                        <th name=\"colT8\" columntype=\"text\" horizontalalign=\"center\" text=\"投保\" width=\"60\"/>\r\n                        <th name=\"colT9\" columntype=\"text\" horizontalalign=\"center\" text=\"开仓时间\" width=\"100\"/>\r\n                        <th name=\"colT10\" columntype=\"thousands\" horizontalalign=\"far\" text=\"持仓盈亏\" width=\"100\"/>\r\n                        <th name=\"colT11\" columntype=\"thousands\" horizontalalign=\"far\" text=\"平仓盈亏\" width=\"100\"/>\r\n                        <th name=\"colT12\" columntype=\"text\" text=\"交易所\" width=\"80\"/>\r\n                        <th name=\"colT13\" columntype=\"text\" text=\"组合状态\" width=\"100\"/>\r\n                        <th name=\"colT14\" columntype=\"double\" horizontalalign=\"far\" text=\"昨结算\" width=\"80\"/>\r\n                        <th name=\"colT15\" columntype=\"int\" horizontalalign=\"far\" text=\"平仓量\" width=\"80\"/>\r\n                        <th name=\"colT16\" columntype=\"thousands\" horizontalalign=\"far\" text=\"浮动盈亏\" width=\"100\"/>\r\n                        <th name=\"colT17\" columntype=\"double\" horizontalalign=\"far\" text=\"最新价\" width=\"80\"/>\r\n                        <th name=\"colT18\" columntype=\"int\" horizontalalign=\"far\" text=\"组合合约代码\" width=\"100\"/>\r\n                      </tr>\r\n                    </table>\r\n                    <!--组合持仓表格-->\r\n                    <table name=\"gridInvestorCombinePositionDetail\" dock=\"fill\" visible=\"false\" bordercolor=\"none\" backcolor=\"none\">\r\n                      <tr>\r\n                        <th name=\"colM1\" columntype=\"text\" text=\"合约\" width=\"120\"/>\r\n                        <th name=\"colM2\" columntype=\"text\" horizontalalign=\"center\" text=\"买卖\" width=\"60\"/>\r\n                        <th name=\"colM3\" columntype=\"int\" horizontalalign=\"far\" text=\"手数\" width=\"60\"/>\r\n                        <th name=\"colM4\" columntype=\"double\" horizontalalign=\"far\" text=\"开仓均价\" width=\"100\"/>\r\n                        <th name=\"colM5\" columntype=\"text\" horizontalalign=\"center\" text=\"投保\" width=\"60\"/>\r\n                      </tr>\r\n                    </table>\r\n                  </div>\r\n                </div>\r\n              </div>\r\n            </div>\r\n          </div>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  </body>\r\n</html>\r\n";
+loadFaceCat(m_paint, xml, m_canvasSize);
+
+    var m_chart = findViewByName("chart", m_views);
+    m_chart.m_candleDivPercent = 0.7;
+    m_chart.m_volDivPercent = 0.3;
+    m_chart.m_indDivPercent = 0;
+    //是否允许重绘
+    var m_allowPaint_Chart = false;
+
+    //加载次数
+    var m_loadTick_Chart = false;
+
+    //检查绘图
+    var checkChartPaint = function(){
+        if(m_allowPaint_Chart){
+            if(m_chart.m_data && m_chart.m_data.length > 0){
+                resetChartVisibleRecord(m_chart);
+                checkChartLastVisibleIndex(m_chart);
+                calcChartIndicator(m_chart);
+                invalidateView(m_chart, m_paint);
+            }
+            m_allowPaint_Chart = false;
+        }
+    };
+
+    setInterval(checkChartPaint, 300);
+
+    //上个日期
+    var m_lastDate_Chart = 0;
+
+    /*
+     * 查询数据
+     */ 
+    var queryRuntimeData = function () {
+        if(m_loadTick_Chart){
+            return;
+        }
+        m_loadTick_Chart = true;
+	    var ws = new WebSocket("wss://ws.coincap.io/trades/binance");
+	    ws.onopen = function () {
+	    };
+	    ws.onmessage = function (e) {
+	        if(m_chart.m_cycle == "second" || m_chart.m_cycle == "tick"){
+		        var json = eval('(' + e.data + ')');
+		        if (json.base == "bitcoin" && json.quote == "tether") {
+	                var thisDate = parseInt(json.timestamp);
+	                if(m_chart.m_cycle == "second"){
+	                    thisDate = parseInt(thisDate / 1000) * 1000;
+	                }
+	                var lastData = null;
+	                if(m_chart.m_data && m_chart.m_data.length > 0){
+	                    lastData = m_chart.m_data[m_chart.m_data.length - 1];
+	                }else{
+	                    m_chart.m_data = new Array();
+	                }
+	                if(lastData && lastData.m_date >= m_lastDate_Chart){
+	                    if(lastData.m_high < json.price){
+	                        lastData.m_high = json.price;
+	                    }
+	                    if(lastData.m_low > json.price){
+	                        lastData.m_low = json.price;
+	                    }
+	                    lastData.m_close = json.price;
+	                    lastData.m_volume = lastData.m_volume + json.volume;
+	                }else{
+	                    var data = new SecurityData();
+                        data.m_close = parseFloat(json.price);
+                        data.m_high = parseFloat(json.price);
+                        data.m_low = parseFloat(json.price);
+                        data.m_open = parseFloat(json.price);
+                        data.m_volume = parseFloat(json.volume);
+                        data.m_date = thisDate;
+                        m_chart.m_data.push(data);
+	                }
+	                if(m_lastDate_Chart < thisDate){
+	                    m_lastDate_Chart = thisDate;
+	                }
+                    m_allowPaint_Chart = true;
+		        }
+            }
+	    };
+	    ws.onclose = function (e) {
+		    console.log("close");
+	    };
+	    ws.onerror = function (e) {
+		    console.log(error);
+	    };
+    };
+    
+    m_chart.m_cycle = "second";
+    queryRuntimeData();
+
+		var m_gridLatestData = findViewByName("gridLatestData", m_views);
+
+		/*
+		 * 创建单元格 
+		 */
+		var createGridCell = function (grid) {
+			var gridCell = new FCGridCell();
+            if (grid.m_paint.m_defaultUIStyle == "dark") {
+                gridCell.m_backColor = "rgb(0,0,0)";
+                gridCell.m_borderColor = "rgb(100,100,100)";
+                gridCell.m_textColor = "rgb(255,255,255)";
+            } else if (grid.m_paint.m_defaultUIStyle == "light") {
+                gridCell.m_backColor = "rgb(255,255,255)";
+                gridCell.m_borderColor = "rgb(150,150,150)";
+                gridCell.m_textColor = "rgb(0,0,0)";
+			}
+			return gridCell;
+		};
+
+/*
+ * 查询数据
+ */ 
+var queryGridData = function () {
+    var url = "https://api.coincap.io/v2/assets?limit=2000";
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.open("GET", url, true);
+    xmlhttp.onreadystatechange = function () {
+	    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+		    var result = xmlhttp.responseText;
+		    var json = eval('(' + result + ')');
+		    if (json.data.length > 0) {
+			    for (var i = 0; i < json.data.length; i++) {
+				    var row = new FCGridRow();
+				    m_gridLatestData.m_rows.push(row);
+				    for(var j = 0; j < m_gridLatestData.m_columns.length; j++){
+				        if(j == 0){
+                            var cell1 = createGridCell(m_gridLatestData);
+				            cell1.m_value = json.data[i].id;
+				            row.m_cells.push(cell1);
+				        }else if(j == 1){
+                            var cell2 = createGridCell(m_gridLatestData);
+				            cell2.m_value = json.data[i].rank;
+				            row.m_cells.push(cell2);
+				        }else if(j == 2){
+                            var cell4 = createGridCell(m_gridLatestData);
+				            cell4.m_value = json.data[i].name;
+				            row.m_cells.push(cell4);
+				        }else if(j == 3){
+                            var cell3 = createGridCell(m_gridLatestData);
+				            cell3.m_value = json.data[i].symbol;
+				            row.m_cells.push(cell3);
+				            cell3.m_textColor = "rgb(255,0,0)";
+				        }else if(j == 4){
+                            var cell10 = createGridCell(m_gridLatestData);
+				            cell10.m_value = json.data[i].changePercent24Hr;
+				            row.m_cells.push(cell10);
+				            if (parseFloat(cell10.m_value) >= 0) {
+					            cell10.m_textColor = "rgb(219,68,83)";
+				            } else {
+					            cell10.m_textColor = "rgb(15,193,118)";
+				            }
+				        }else if(j == 5){
+                            var cell11 = createGridCell(m_gridLatestData);
+				            cell11.m_value = json.data[i].vwap24Hr;
+				            row.m_cells.push(cell11);
+				        }else if(j == 6){
+                            var cell5 = createGridCell(m_gridLatestData);
+				            cell5.m_value = json.data[i].supply;
+				            row.m_cells.push(cell5);
+				        }else if(j == 7){
+                            var cell6 = createGridCell(m_gridLatestData);
+				            cell6.m_value = json.data[i].maxSupply;
+				            row.m_cells.push(cell6);
+				        }else if(j == 8){
+                            var cell7 = createGridCell(m_gridLatestData);
+				            cell7.m_value = json.data[i].marketCapUsd;
+				            row.m_cells.push(cell7);
+				        }else if(j == 9){
+                            var cell8 = createGridCell(m_gridLatestData);
+				            cell8.m_value = json.data[i].volumeUsd24Hr;
+				            row.m_cells.push(cell8);
+				        }else if(j == 10){
+                            var cell9 = createGridCell(m_gridLatestData);
+				            cell9.m_value = json.data[i].priceUsd;
+				            row.m_cells.push(cell9);
+				        }else{
+                            var cellX = createGridCell(m_gridLatestData);
+				            cellX.m_value = "";
+				            row.m_cells.push(cellX);
+				        }
+				    }
+			    }
+		    }
+		    invalidateView(m_gridLatestData, m_paint);
+	    }
+    }
+    xmlhttp.send(null);
+};
+queryGridData();
+
+var m_gridNoTrade = findViewByName("gridNoTrade", m_views);
+
+/*
+ * 查询数据
+ */ 
+var queryGridData2 = function () {
+    var url = "https://api.coincap.io/v2/exchanges?limit=2000";
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.open("GET", url, true);
+    xmlhttp.onreadystatechange = function () {
+	    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+		    var result = xmlhttp.responseText;
+		    var json = eval('(' + result + ')');
+		    if (json.data.length > 0) {
+			    for (var i = 0; i < json.data.length; i++) {
+				    var row = new FCGridRow();
+				    m_gridNoTrade.m_rows.push(row);
+				    for(var j = 0; j < m_gridNoTrade.m_columns.length; j++){
+				        if(j == 0){
+                            var cell1 = createGridCell(m_gridNoTrade);
+				            cell1.m_value = json.data[i].exchangeId;
+				            row.m_cells.push(cell1);
+				        }else if(j == 1){
+                            var cell2 = createGridCell(m_gridNoTrade);
+				            cell2.m_value = json.data[i].name;
+				            row.m_cells.push(cell2);
+				        }else if(j == 2){
+                            var cell4 = createGridCell(m_gridNoTrade);
+				            cell4.m_value = json.data[i].rank;
+				            row.m_cells.push(cell4);
+				        }else if(j == 3){
+                            var cell3 = createGridCell(m_gridNoTrade);
+				            cell3.m_value = json.data[i].percentTotalVolume;
+				            row.m_cells.push(cell3);
+				        }else if(j == 4){
+                            var cell10 = createGridCell(m_gridNoTrade);
+				            cell10.m_value = json.data[i].volumeUsd;
+				            row.m_cells.push(cell10);
+				        }else if(j == 5){
+                            var cell11 = createGridCell(m_gridNoTrade);
+				            cell11.m_value = json.data[i].socket;
+				            row.m_cells.push(cell11);
+				        }else if(j == 6){
+                            var cell5 = createGridCell(m_gridNoTrade);
+				            cell5.m_value = json.data[i].exchangeUrl;
+				            row.m_cells.push(cell5);
+				        }else if(j == 7){
+                            var cell6 = createGridCell(m_gridNoTrade);
+				            cell6.m_value = json.data[i].updated;
+				            row.m_cells.push(cell6);
+				        }else{
+                            var cellX = createGridCell(m_gridNoTrade);
+				            cellX.m_value = "";
+				            row.m_cells.push(cellX);
+				        }
+					}
+			    }
+		    }
+		    invalidateView(m_gridNoTrade, m_paint);
+	    }
+    }
+    xmlhttp.send(null);
+};
+
+queryGridData2();
+
+var m_gridInvestorPosition = findViewByName("gridInvestorPosition", m_views);
+
+/*
+ * 查询数据
+ */ 
+var queryGridData3 = function () {
+    var url = "https://api.coincap.io/v2/markets?limit=2000";
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.open("GET", url, true);
+    xmlhttp.onreadystatechange = function () {
+	    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+		    var result = xmlhttp.responseText;
+		    var json = eval('(' + result + ')');
+		    if (json.data.length > 0) {
+			    for (var i = 0; i < json.data.length; i++) {
+				    var row = new FCGridRow();
+				    m_gridInvestorPosition.m_rows.push(row);
+				    for(var j = 0; j < m_gridInvestorPosition.m_columns.length; j++){
+				         if(j == 0){
+                             var cell1 = createGridCell(m_gridInvestorPosition);
+				            cell1.m_value = json.data[i].exchangeId;
+				            row.m_cells.push(cell1);
+				        }else if(j == 1){
+                             var cell2 = createGridCell(m_gridInvestorPosition);
+				            cell2.m_value = json.data[i].rank;
+				            row.m_cells.push(cell2);
+				        }else if(j == 2){
+                             var cell4 = createGridCell(m_gridInvestorPosition);
+				            cell4.m_value = json.data[i].baseSymbol;
+				            row.m_cells.push(cell4);
+				        }else if(j == 3){
+                             var cell3 = createGridCell(m_gridInvestorPosition);
+				            cell3.m_value = json.data[i].baseId;
+				            row.m_cells.push(cell3);
+				            cell3.m_textColor = "rgb(255,0,0)";
+				        }else if(j == 4){
+                             var cell10 = createGridCell(m_gridInvestorPosition);
+				            cell10.m_value = json.data[i].quoteSymbol;
+				            row.m_cells.push(cell10);
+				            if (parseFloat(cell10.m_value) >= 0) {
+					            cell10.m_textColor = "rgb(219,68,83)";
+				            } else {
+					            cell10.m_textColor = "rgb(15,193,118)";
+				            }
+				        }else if(j == 5){
+                             var cell11 = createGridCell(m_gridInvestorPosition);
+				            cell11.m_value = json.data[i].quoteId;
+				            row.m_cells.push(cell11);
+				        }else if(j == 6){
+                             var cell5 = createGridCell(m_gridInvestorPosition);
+				            cell5.m_value = json.data[i].priceQuote;
+				            row.m_cells.push(cell5);
+				        }else if(j == 7){
+                             var cell6 = createGridCell(m_gridInvestorPosition);
+				            cell6.m_value = json.data[i].priceUsd;
+				            row.m_cells.push(cell6);
+				        }else if(j == 8){
+                             var cell7 = createGridCell(m_gridInvestorPosition);
+				            cell7.m_value = json.data[i].volumeUsd24Hr;
+				            row.m_cells.push(cell7);
+				        }else if(j == 9){
+                             var cell8 = createGridCell(m_gridInvestorPosition);
+				            cell8.m_value = json.data[i].percentExchangeVolume;
+				            row.m_cells.push(cell8);
+				        }else if(j == 10){
+                             var cell9 = createGridCell(m_gridInvestorPosition);
+				            cell9.m_value = json.data[i].tradesCount24Hr;
+				            row.m_cells.push(cell9);
+				        }else if(j == 10){
+                             var cell12 = createGridCell(m_gridInvestorPosition);
+				            cell12.m_value = json.data[i].updated;
+				            row.m_cells.push(cell12);
+				        }else{
+                             var cellX = createGridCell(m_gridInvestorPosition);
+				            cellX.m_value = "";
+				            row.m_cells.push(cellX);
+				        }
+				    }
+			    }
+		    }
+		    invalidateView(m_gridInvestorPosition, m_paint);
+	    }
+    }
+    xmlhttp.send(null);
+};
+
+queryGridData3();
+    </script>
+</body>
+</html>

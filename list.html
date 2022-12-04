@@ -1,0 +1,659 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat的HTML5框架(开源)</title>
+<style>
+			html,
+			body {		
+				width: 100%;
+				height: 100%;
+			}
+* { margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+canvas { position:fixed;left:0px;top:0px; }
+</style>
+</head>
+<body>
+    <canvas id="listCanvas" width="800" height="800" >
+        Your browser does not support canvas element.
+    </canvas>
+    <script type="text/javascript" src="facecat.js" ></script>
+    <script type="text/javascript" src="facecat_div.js" ></script>
+    <script type="text/javascript">
+    var m_canvasList = document.getElementById("listCanvas"); //绘图区域
+    m_canvasList.width = window.innerWidth;
+    m_canvasList.height = window.innerHeight;
+    var m_contextList = m_canvasList.getContext("2d"); //绘图上下文
+    //缩放高清模式
+    if (window.devicePixelRatio) {
+        m_canvasList.style.width = m_canvasList.width + 'px';
+        m_canvasList.style.height = m_canvasList.height + 'px';
+        m_canvasList.height = m_canvasList.height* window.devicePixelRatio;
+        m_canvasList.width = m_canvasList.width * window.devicePixelRatio;
+        m_contextList.scale(window.devicePixelRatio, window.devicePixelRatio);
+        m_ratio = window.devicePixelRatio;
+    }
+    var m_paintList = new FCPaint(); //绘图对象
+    m_paintList.m_defaultUIStyle = "dark";
+    var url = location.href;
+    if(url.indexOf("color=light") != -1){
+        m_paintList.m_defaultUIStyle = "light";
+    }
+    
+    m_paintList.m_canvas = m_canvasList;
+    m_canvasList.m_paint = m_paintList;
+    m_isMobile = isMobileMode();
+    if(m_isMobile){
+        m_paintList.m_scaleFactorX = 2.5;
+        m_paintList.m_scaleFactorY = 2.5;
+    }
+    //实际绘图大小
+    var m_canvasSizeList = new FCSize((m_canvasList.width / m_ratio / m_paintList.m_scaleFactorX), (m_canvasList.height / m_ratio / m_paintList.m_scaleFactorY));
+
+    var m_views_List = new Array(); //视图集合
+    m_canvasList.m_views = m_views_List;
+    
+    // 禁用双指放大
+    document.documentElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+            event.preventDefault();
+        }
+        }, {
+        passive: false
+    });
+     
+    // 禁用双击放大
+    var m_lastTouchEnd_List = 0;
+    document.documentElement.addEventListener('touchend', function (event) {
+        var now = Date.now();
+        if (now - m_lastTouchEnd_List <= 300) {
+            event.preventDefault();
+        }
+        m_lastTouchEnd_List = now;
+    }, {
+        passive: false
+    });
+    
+    //面积图数据
+    function ListData(){
+        this.m_value = 0; //数值
+        this.m_key = null;
+        this.m_firstPrice = null;
+        this.m_data = null;
+        this.m_type = "ldata"; //类型
+    }
+    
+    ListData.prototype = FCView;
+
+    //创建图层
+    var m_list = new FCDiv();
+
+    //初始化图层
+    var initDiv = function(){
+        m_list.m_paint = m_paintList;
+        if (m_list.m_paint.m_defaultUIStyle == "dark") {
+            m_list.m_backColor = "rgb(0,0,0)";
+        } else if (m_list.m_paint.m_defaultUIStyle == "light") {
+            m_list.m_backColor = "rgb(255,255,255)";
+	    }
+        m_list.m_borderColor = null;
+        m_list.m_location = new FCPoint(0, 0);
+        m_list.m_size = new FCSize(m_canvasSizeList.cx, m_canvasSizeList.cy);
+        m_list.m_text = "图层";
+        m_list.m_visible = true;
+        m_list.m_showVScrollBar = true;
+        m_list.m_type = "list";
+
+        m_list.m_useAnimation = true;
+        m_list.m_itemHeight = 60;
+        m_list.m_rects = new Array();
+        m_views_List.push(m_list);
+    };
+
+    initDiv();
+    
+    /*
+    * 动画秒表
+    */
+    var onListTime = function(list){
+        var paint2 = false;
+        if(list.m_useAnimation){
+           for (var i = 0; i < list.m_rects.length; i++)
+           {
+               var subView = list.m_views[i];
+               var targetRect = list.m_rects[i];
+               var nowRect = new FCRect(subView.m_location.x, subView.m_location.y, subView.m_location.x + subView.m_size.cx, subView.m_location.y + subView.m_size.cy);
+               var isMove = false;
+               if (true)
+               {
+                   if (nowRect.left > targetRect.left)
+                   {
+                       nowRect.left -= (nowRect.left - targetRect.left) / 4;
+                       if (nowRect.left - targetRect.left < 10)
+                       {
+                           nowRect.left = targetRect.left;
+                       }
+                       paint2 = true;
+                   }
+                   else if (nowRect.left < targetRect.left)
+                   {
+                       nowRect.left += (targetRect.left - nowRect.left) / 4;
+                       if (targetRect.left - nowRect.left < 10)
+                       {
+                           nowRect.left = targetRect.left;
+                       }
+                       paint2 = true;
+                   }
+               }
+
+               if (true)
+               {
+                   if (nowRect.top > targetRect.top)
+                   {
+                       nowRect.top -= (nowRect.top - targetRect.top) / 4;
+                       if (nowRect.top - targetRect.top < 10)
+                       {
+                           nowRect.top = targetRect.top;
+                       }
+                       isMove = true;
+                       paint2 = true;
+                   }
+                   else if (nowRect.top < targetRect.top)
+                   {
+                       nowRect.top += (targetRect.top - nowRect.top) / 4;
+                       if (targetRect.top - nowRect.top < 10)
+                       {
+                           nowRect.top = targetRect.top;
+                       }
+                       paint2 = true;
+                   }
+               }
+
+               if (true)
+               {
+                   if (nowRect.right > targetRect.right)
+                   {
+                       nowRect.right -= (nowRect.right - targetRect.right) / 4;
+                       if (nowRect.right - targetRect.right < 10)
+                       {
+                           nowRect.right = targetRect.right;
+                       }
+                       paint2 = true;
+                   }
+                   else if (nowRect.right < targetRect.right)
+                   {
+                       nowRect.right += (targetRect.right - nowRect.right) / 4;
+                       if (targetRect.right - nowRect.right < 10)
+                       {
+                           nowRect.right = targetRect.right;
+                       }
+                       paint2 = true;
+                   }
+               }
+               if (true)
+               {
+                   if (nowRect.bottom > targetRect.bottom)
+                   {
+                       nowRect.bottom -= (nowRect.bottom - targetRect.bottom) / 4;
+                       if (nowRect.bottom - targetRect.bottom < 10)
+                       {
+                           nowRect.bottom = targetRect.bottom;
+                       }
+                       paint2 = true;
+                   }
+                   else if (nowRect.bottom < targetRect.bottom)
+                   {
+                       nowRect.bottom += (targetRect.bottom - nowRect.bottom) / 4;
+                       if (targetRect.bottom - nowRect.bottom < 10)
+                       {
+                           nowRect.bottom = targetRect.bottom;
+                       }
+                       paint2 = true;
+                   }
+               }
+               subView.m_isMove = isMove;
+               subView.m_location = new FCPoint(nowRect.left, nowRect.top);
+               subView.m_size = new FCSize(nowRect.right - nowRect.left, nowRect.bottom - nowRect.top);
+           }
+        }else{
+            for (var i = 0; i < list.m_rects.length; i++)
+           {
+               var subView = list.m_views[i];
+               var targetRect = list.m_rects[i];
+               subView.m_location = new FCPoint(targetRect.left, targetRect.top);
+               subView.m_size = new FCSize(targetRect.right - targetRect.left, targetRect.bottom - targetRect.top);
+            }
+        }
+        if(paint2){
+            invalidateView(m_list, m_list.m_paint);
+        }
+    };
+
+    /*
+    * 鼠标点击实现方法
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onClick_Div = function(view, mp, buttons, clicks, delta) {
+    };
+
+
+    /*
+    * 鼠标按下实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseDown_Div = function(view, mp, buttons, clicks, delta) {
+	    if (view.m_type == "list") {
+		    var firstTouch = false, secondTouch = false;
+		    var firstPoint = mp, secondPoint = mp;
+		    if (buttons == 1) {
+			    firstTouch = true;
+		    }
+		    mouseDownDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "ldata") {
+		    var firstTouch = false, secondTouch = false;
+		    var firstPoint = mp, secondPoint = mp;
+		    if (buttons == 1) {
+			    firstTouch = true;
+		    }
+		    mouseDownDiv(view.m_parent, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+    };
+
+    /*
+    * 鼠标滚动实现方法  
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseWheel_Div = function (view, mp, buttons, clicks, delta) {
+         if(window.event.ctrlKey && view.m_paint){
+            if(delta > 0){
+                view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX + 0.1;
+                view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY + 0.1;
+                resizeAll();
+            }else if(delta < 0){
+                if(view.m_paint.m_scaleFactorX > 0.2){
+                    view.m_paint.m_scaleFactorX = view.m_paint.m_scaleFactorX - 0.1;
+                    view.m_paint.m_scaleFactorY = view.m_paint.m_scaleFactorY - 0.1;
+                    resizeAll();
+                }
+            }
+            return;
+        }
+	    if (view.m_type == "list") {
+	        mouseWheelDiv(view, delta);
+		    invalidateView(view, m_paintList);
+	    }
+	    if (view.m_type == "ldata") {
+	        mouseWheelDiv(view.m_parent, delta);
+		    invalidateView(view.m_parent, m_paintList);
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchBegin_Div = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "list") {
+		    view.m_allowDragScroll = true;
+		    mouseDownDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+	    if (view.m_type == "ldata") {
+		    view.m_parent.m_allowDragScroll = true;
+		    mouseDownDiv(view.m_parent, firstTouch, secondTouch, firstPoint, secondPoint);
+	    }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchMove_Div = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "list") {
+            mouseMoveDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paintList);
+        }
+        if (view.m_type == "ldata") {
+            mouseMoveDiv(view.m_parent, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view.m_parent, m_paintList);
+        }
+    };
+    
+    /*
+    * 触摸开始方法
+    * view:视图
+    * firstTouch:是否第一次触摸
+    * secondTouch:是否第二次触摸
+    * firstPoint:第一次触摸的坐标
+    * secondPoint:第二次触摸的坐标
+    */
+    var onTouchEnd_Div = function(view, firstTouch, secondTouch, firstPoint, secondPoint){
+        if (view.m_type == "list") {
+		    mouseUpDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view, m_paintList);
+	    }
+	    if (view.m_type == "ldata") {
+		    mouseUpDiv(view.m_parent, firstTouch, secondTouch, firstPoint, secondPoint);
+		    invalidateView(view.m_parent, m_paintList);
+	    }
+    };
+    
+    /*
+    * 鼠标移动实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */
+    var onMouseMove_Div = function (view, mp, buttons, clicks, delta) {
+        if (view.m_type == "list") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+	        mouseMoveDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view, m_paintList);
+        }
+        if (view.m_type == "ldata") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+	        mouseMoveDiv(view.m_parent, firstTouch, secondTouch, firstPoint, secondPoint);
+            invalidateView(view.m_parent, m_paintList);
+        }
+    };
+
+    /*
+    * 鼠标抬起实现方法 
+    * view:视图
+    * mp:坐标
+    * button:按钮
+    * clicks:点击次数
+    * delta:滚轮值
+    */ 
+    var onMouseUp_Div = function (view, mp, buttons, clicks, delta) {
+        if (view.m_type == "list") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+	        mouseUpDiv(view, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+        if (view.m_type == "ldata") {
+            var firstTouch = false, secondTouch = false;
+            var firstPoint = mp, secondPoint = mp;
+            if (buttons == 1) {
+	            firstTouch = true;
+            }
+	        mouseUpDiv(view.m_parent, firstTouch, secondTouch, firstPoint, secondPoint);
+        }
+    };
+
+    /*
+    * 绘制数据项
+    */
+    var drawListItem =  function (view, paint, clipRect) {
+        var scrollV = view.m_parent.m_scrollV;
+        if(view.m_location.y + view.m_size.cy - scrollV >= 0 && view.m_location.y - scrollV < view.m_parent.m_size.cy){
+            var totalValue = view.m_parent.m_totalValue;
+            var diffRange = ((view.m_data.price - view.m_firstPrice) / view.m_data.price * 100).toFixed(2) + "%";
+	        var rtRight = (view.m_size.cx - 130) * view.m_value / totalValue;
+	        if(view.m_backColor){
+	            paint.fillRect(view.m_backColor, 0, 10 - scrollV + view.m_location.y, rtRight, view.m_size.cy - 10 - scrollV + view.m_location.y);
+	        }
+	        if(view.m_borderColor){
+	            paint.drawRect(view.m_borderColor, 1, 0, 0, 10 - scrollV + view.m_location.y, rtRight, view.m_size.cy - 10 - scrollV + view.m_location.y);
+	        }
+	        rtRight += 10;
+	        var fontSize1 = parseInt(Math.min(view.m_size.cx, view.m_size.cy) / 4);
+	        if(fontSize1 > 1){
+	            var baseUpper = view.m_data.base.toUpperCase();
+	            var font1 = fontSize1 + "px Arial";
+	            var tSize = paint.textSize(baseUpper, font1);	            
+	            var quoteUpper = view.m_data.quote.toUpperCase();
+	            var font2 = (fontSize1 / 2) + "px Arial";
+	            var tSize2 = paint.textSize(quoteUpper, font2);
+	            
+	            if (view.m_paint.m_defaultUIStyle == "dark") {
+                    paint.drawText(baseUpper, "rgb(255,255,255)", font1, rtRight, view.m_size.cy / 2 - tSize.cy + 2 - scrollV + view.m_location.y);
+	                paint.drawText(quoteUpper, "rgb(255,255,255)", font2, rtRight, view.m_size.cy / 2 + 2 - scrollV + view.m_location.y);
+                } else if (view.m_paint.m_defaultUIStyle == "light") {
+                    paint.drawText(baseUpper, "rgb(0,0,0)", font1, rtRight, view.m_size.cy / 2 - tSize.cy + 2 - scrollV + view.m_location.y);
+	                paint.drawText(quoteUpper, "rgb(0,0,0)", font2, rtRight, view.m_size.cy / 2 + 2 - scrollV + view.m_location.y);
+	            }
+	            
+	            var strPrice = view.m_data.price.toFixed(6);
+	            var font3 = (fontSize1 * 2 / 3) + "px Arial";
+	            var tSize5 = paint.textSize(strPrice, font3);
+	            if (view.m_paint.m_defaultUIStyle == "dark") {
+                    paint.drawText(strPrice, "rgb(255,255,255)", font3, rtRight, view.m_size.cy / 2 + tSize.cy + 2 - scrollV + view.m_location.y);
+                } else if (view.m_paint.m_defaultUIStyle == "light") {
+                     paint.drawText(strPrice, "rgb(0,0,0)", font3, rtRight, view.m_size.cy / 2 + tSize.cy + 2 - scrollV + view.m_location.y);
+	            }
+	        }
+        }
+    };
+
+    /*
+    * 重绘背景的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintList.onPaint = function (view, paint, clipRect) {
+	    if (view.m_type == "list") {
+	        paint.fillRect(view.m_backColor, 0, 0, view.m_size.cx, view.m_size.cy);
+	        for(var i = 0; i < view.m_views.length; i++){
+	            if(!view.m_views[i].m_isMove){
+	                drawListItem(view.m_views[i], paint, clipRect);
+	            }
+	        }
+	    }
+    };
+
+    /*
+    * 重绘边框的实现方法
+    * view:视图
+    * paint:绘图对象
+    * clipRect:裁剪区域
+    */
+    m_paintList.onPaintBorder = function (view, paint, clipRect) {
+	    if (view.m_type == "list") {
+		    for(var i = 0; i < view.m_views.length; i++){
+	            if(view.m_views[i].m_isMove){
+	                drawListItem(view.m_views[i], paint, clipRect);
+	            }
+	        }
+		    drawDivScrollBar(view, paint, clipRect);
+	    } 
+    };
+    
+    addMouseDownEvent(m_canvasList, onMouseDown_Div);
+    addMouseMoveEvent(m_canvasList, onMouseMove_Div);
+    addMouseWheelEvent(m_canvasList, onMouseWheel_Div);
+    addMouseUpEvent(m_canvasList, onMouseUp_Div, onClick_Div);
+    addTouchBeginEvent(m_canvasList, onTouchBegin_Div);
+    addTouchMoveEvent(m_canvasList, onTouchMove_Div);
+    addTouchEndEvent(m_canvasList, onTouchEnd_Div, onClick_Div);
+
+    /*
+     * 重置大小
+     */ 
+    var resizeAll = function() {
+    	 m_canvasList.width = window.innerWidth;
+        m_canvasList.height = window.innerHeight;
+        //缩放高清模式
+        if (window.devicePixelRatio) {
+            m_canvasList.style.width = m_canvasList.width + 'px';
+            m_canvasList.style.height = m_canvasList.height + 'px';
+            m_canvasList.height = m_canvasList.height* window.devicePixelRatio;
+            m_canvasList.width = m_canvasList.width * window.devicePixelRatio;
+            m_contextList.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        m_canvasSizeList = new FCSize((m_canvasList.width / m_ratio / m_paintList.m_scaleFactorX), (m_canvasList.height / m_ratio / m_paintList.m_scaleFactorY));
+        m_list.m_size = new FCSize(m_canvasSizeList.cx, m_canvasSizeList.cy);
+	    invalidate(m_paintList);
+    };
+    
+    /*
+    * 监听大小改变 
+    */
+    window.onresize = function() {
+       resizeAll();
+    };
+
+    /*
+    * 旋转监听
+    */
+    window.onorientationchange = function(){
+        resizeAll();
+
+    };
+    
+    /*
+    * 更新列表
+    */
+    var updateList = function(list){
+        list.m_rects = new Array();
+        var viewsSize = list.m_views.length;
+	    for (var i = 0; i < viewsSize; i++) {
+	        var thisCell = list.m_views[i];
+	        list.m_rects.push(new FCRect(0, i * list.m_itemHeight, list.m_size.cx, (i + 1) * list.m_itemHeight));
+	    }
+    };
+    
+    
+    var m_allowPaint_List = false;
+
+    /*
+    * 检查绘图
+    */
+    var checkListPaint = function(){
+        if(m_allowPaint_List){
+        	updateList(m_list);
+            onListTime(m_list);
+            resizeAll();
+            m_allowPaint_List = false;
+        }
+    };
+
+    setInterval(checkListPaint, 50);
+    
+    var m_listColors = new Array();
+    m_listColors.push("rgb(59,174,218)");
+    m_listColors.push("rgb(185,63,150)");
+    m_listColors.push("rgb(219,68,83)");
+    m_listColors.push("rgb(246,187,67)");
+    m_listColors.push("rgb(216,112,173)");
+    m_listColors.push("rgb(140,192,81)");
+    m_listColors.push("rgb(233,87,62)");
+    m_listColors.push("rgb(150,123,220)");
+    m_listColors.push("rgb(75,137,220)");
+    m_listColors.push("rgb(170,178,189)");
+
+    /*
+     * 查询数据
+     */ 
+    var queryPyData = function () {
+	    var ws = new WebSocket("wss://ws.coincap.io/trades/binance");
+	    ws.onopen = function () {
+	    };
+	    ws.onmessage = function (e) {
+		    var json = eval('(' + e.data + ')');
+		    if(json.base == "bitcoin" || json.base == "bitcoin-bep2" || json.base == "binance-usd"){
+		        return;
+		    }
+		    var key = json.base + "," + json.quote;
+		    var hasData = false;
+		    var viewsSize = m_list.m_views.length;
+		    for (var i = 0; i < viewsSize; i++) {
+			    var thisCell = m_list.m_views[i];
+			    if(thisCell.m_key == key){
+			        hasData = true;
+			        thisCell.m_data = json;
+			        thisCell.m_value = thisCell.m_value + json.volume * json.price;
+			        break;
+			    }
+			}
+	        if(!hasData){
+	            var pData = new ListData;
+			    pData.m_key = key;
+			    pData.m_text = key;
+			    pData.m_data = json;
+			    pData.m_value = json.volume * json.price;
+			    pData.m_size = new FCSize(m_list.m_size.cx, m_list.m_itemHeight);
+			    pData.m_location = new FCPoint(0, m_list.m_views.length * m_list.m_itemHeight);
+			    pData.m_firstPrice = json.price;
+			    pData.m_backColor = m_listColors[m_list.m_views.length % m_listColors.length];
+			    pData.m_paint = m_paintList;
+			    if (m_list.m_paint.m_defaultUIStyle == "dark") {
+                    pData.m_borderColor = "rgb(255,255,255)";
+                } else if (m_list.m_paint.m_defaultUIStyle == "light") {
+                    pData.m_borderColor = "rgb(0,0,0)";
+	            }
+			    pData.m_visible = true;
+			    pData.m_parent = m_list;
+			    m_list.m_views.push(pData);
+	        }  
+	        var totalValue = 0; 
+	        viewsSize = m_list.m_views.length;
+	        for (var i = 0; i < viewsSize; i++) {
+	            var thisCell = m_list.m_views[i];
+	            if(totalValue < thisCell.m_value){
+	                totalValue = thisCell.m_value;
+	            }
+	        }
+	        m_list.m_totalValue = totalValue;
+	        m_list.m_views.sort((m, n) => {
+			    if (m.m_value > n.m_value) {
+				    return -1;
+			    }
+			    else if (m.m_value < n.m_value) {
+				    return 1;
+			    }
+			    else return 0;
+		    });
+		    m_allowPaint_List = true;
+	    };
+	    ws.onclose = function (e) {
+		    console.log("close");
+	    };
+	    ws.onerror = function (e) {
+		    console.log(error);
+	    };
+    };
+
+    invalidate(m_paintList);
+    queryPyData();
+    </script>
+</body>
+</html>
