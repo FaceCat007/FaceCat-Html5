@@ -130,7 +130,8 @@ canvas { position:fixed;left:0px;top:0px; }
 		        sunDiv.m_text = "按钮" + i + "," + j;
 		        sunDiv.m_visible = true;
 		        sunDiv.m_parent = subDiv;
-		        sunDiv.m_paint = m_paintDiv;
+                sunDiv.m_paint = m_paintDiv;
+                sunDiv.m_allowDrag = true;
 		        sunDiv.m_backImage = "http://www.jjmfc.com/index_files/go.png";
 		        sunDiv.m_font = "12px Arial";
 		        if (m_div.m_paint.m_defaultUIStyle == "dark") {

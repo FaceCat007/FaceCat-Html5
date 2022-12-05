@@ -432,6 +432,7 @@ function FCView() {
 	this.m_font = "12px Arial"; //字体
 	this.m_hoveredColor = "none"; //鼠标悬停时的颜色
 	this.m_pushedColor = "rgb(100,100,100)"; //鼠标按下时的颜色
+	this.m_allowDrag = false; //是否允许拖动
 };
 
 /*
@@ -823,6 +824,10 @@ var m_ratio = 1; //缩放比例
 var m_cancelClick = false; //是否退出点击
 var m_isMobile = false; //是否移动端
 
+var m_dragBeginPoint = new FCPoint(); //拖动开始时的触摸位置
+var m_dragBeginRect = new FCRect(); //拖动开始时的区域
+var m_draggingView = null; //正被拖动的控件
+
 /*
 * 添加鼠标按下的方法
 * canvas:图层
@@ -860,11 +865,38 @@ var addMouseMoveEvent =  function(canvas, callBack){
 	        var mp = getMousePostion(evt, canvas);
 			if (m_mouseDownView) {
 				m_mouseMoveView = m_mouseDownView;
-	            var cmp = new FCPoint(mp.x - clientX(m_mouseDownView), mp.y - clientY(m_mouseDownView));
-	            if(callBack){
-	                callBack(m_mouseDownView, cmp, 1, 1, 0);
-	            }
-	        }else{
+				var cmp = new FCPoint(mp.x - clientX(m_mouseDownView), mp.y - clientY(m_mouseDownView));
+				if (callBack) {
+					callBack(m_mouseDownView, cmp, 1, 1, 0);
+				}
+				if (m_mouseDownView.m_allowDrag) {
+					if (Math.abs(mp.x - m_mouseDownPoint.x) > 5 || Math.abs(mp.y - m_mouseDownPoint.y) > 5) {
+						m_dragBeginRect = new FCRect(m_mouseDownView.m_location.x, m_mouseDownView.m_location.y,
+							m_mouseDownView.m_location.x + m_mouseDownView.m_size.cx,
+							m_mouseDownView.m_location.y + m_mouseDownView.m_size.cy);
+						m_dragBeginPoint = new FCPoint(m_mouseDownPoint.x, m_mouseDownPoint.y);
+						m_draggingView = m_mouseDownView;
+						m_mouseDownView = null;
+					}
+				}
+			}
+			else if (m_draggingView != null) {
+				var offsetX = mp.x - m_dragBeginPoint.x;
+				var offsetY = mp.y - m_dragBeginPoint.y;
+				var newBounds = new FCRect(m_dragBeginRect.left + offsetX, m_dragBeginRect.top + offsetY,
+					m_dragBeginRect.right + offsetX, m_dragBeginRect.bottom + offsetY);
+				m_draggingView.m_location = new FCPoint(newBounds.left, newBounds.top);
+				if (m_draggingView.m_parent) {
+					if (m_draggingView.m_parent.m_paint) {
+						invalidateView(m_draggingView.m_parent, m_draggingView.m_parent.m_paint);
+                    }
+				} else {
+					if (m_draggingView.m_paint) {
+						invalidate(m_draggingView.m_paint);
+					}
+                }
+            }
+			else {
 	            var view = findView(mp, canvas.m_views);
 	            var cmp = new FCPoint(mp.x - clientX(view), mp.y - clientY(view));
 				if (view) {
@@ -892,12 +924,40 @@ var addMouseMoveEvent2 =  function(canvas, callBack, enterCallBack, leaveCallBac
         }
         if(!m_isMobile){
 	        var mp = getMousePostion(evt, canvas);
-	        if(m_mouseDownView){
+			if (m_mouseDownView) {
+				m_mouseMoveView = m_mouseDownView;
 	            var cmp = new FCPoint(mp.x - clientX(m_mouseDownView), mp.y - clientY(m_mouseDownView));
 	            if(callBack){
 	                callBack(m_mouseDownView, cmp, 1, 1, 0);
-	            }
-	        }else{
+				}
+				if (m_mouseDownView.m_allowDrag) {
+					if (Math.abs(mp.x - m_mouseDownPoint.x) > 5 || Math.abs(mp.y - m_mouseDownPoint.y) > 5) {
+						m_dragBeginRect = new FCRect(m_mouseDownView.m_location.x, m_mouseDownView.m_location.y,
+							m_mouseDownView.m_location.x + m_mouseDownView.m_size.cx,
+							m_mouseDownView.m_location.y + m_mouseDownView.m_size.cy);
+						m_dragBeginPoint = new FCPoint(m_mouseDownPoint.x, m_mouseDownPoint.y);
+						m_draggingView = m_mouseDownView;
+						m_mouseDownView = null;
+					}
+				}
+			}
+			else if (m_draggingView != null) {
+				var offsetX = mp.x - m_dragBeginPoint.x;
+				var offsetY = mp.y - m_dragBeginPoint.y;
+				var newBounds = new FCRect(m_dragBeginRect.left + offsetX, m_dragBeginRect.top + offsetY,
+					m_dragBeginRect.right + offsetX, m_dragBeginRect.bottom + offsetY);
+				m_draggingView.m_location = new FCPoint(newBounds.left, newBounds.top);
+				if (m_draggingView.m_parent) {
+					if (m_draggingView.m_parent.m_paint) {
+						invalidateView(m_draggingView.m_parent, m_draggingView.m_parent.m_paint);
+					}
+				} else {
+					if (m_draggingView.m_paint) {
+						invalidate(m_draggingView.m_paint);
+					}
+				}
+			}
+			else {
 	            var view = findView(mp, canvas.m_views);
 	            var cmp = new FCPoint(mp.x - clientX(view), mp.y - clientY(view));
 	            if(view) {
@@ -1038,7 +1098,8 @@ var addTouchMoveEvent = function(canvas, callBack){
 	            m_touchFirstPoint = new FCPoint();
 	            m_touchSecondPoint = new FCPoint();
 		        var clx = clientX(m_mouseDownView);
-		        var cly = clientY(m_mouseDownView);
+				var cly = clientY(m_mouseDownView);
+				var mp = getMousePostion(evt.touches[0], canvas);
 	            if (evt.touches.length >= 1) {
 		            m_firstTouch = true;
 		            m_touchFirstPoint = getMousePostion(evt.touches[0], canvas);
@@ -1054,13 +1115,45 @@ var addTouchMoveEvent = function(canvas, callBack){
 	            }
 	            if(callBack){
 		            callBack(m_mouseDownView, m_firstTouch, m_secondTouch, m_touchFirstPoint, m_touchSecondPoint);
-		        }
-		        if(m_mouseDownView.m_allowDragScroll){
-                    evt.preventDefault && evt.preventDefault();
-                    evt.returnValue = false;
-                    evt.stopPropagation && evt.stopPropagation();
-                }
-            }
+				}
+				if (m_mouseDownView.m_allowDrag) {
+					if (Math.abs(mp.x - m_mouseDownPoint.x) > 5 || Math.abs(mp.y - m_mouseDownPoint.y) > 5) {
+						m_dragBeginRect = new FCRect(m_mouseDownView.m_location.x, m_mouseDownView.m_location.y,
+							m_mouseDownView.m_location.x + m_mouseDownView.m_size.cx,
+							m_mouseDownView.m_location.y + m_mouseDownView.m_size.cy);
+						m_dragBeginPoint = new FCPoint(m_mouseDownPoint.x, m_mouseDownPoint.y);
+						m_draggingView = m_mouseDownView;
+						m_mouseDownView = null;
+					}
+				}
+				if (m_mouseDownView && m_mouseDownView.m_allowDragScroll) {
+					evt.preventDefault && evt.preventDefault();
+					evt.returnValue = false;
+					evt.stopPropagation && evt.stopPropagation();
+				}
+			}
+			else if (m_draggingView != null) {
+				var mp = getMousePostion(evt.touches[0], canvas);
+				var offsetX = mp.x - m_dragBeginPoint.x;
+				var offsetY = mp.y - m_dragBeginPoint.y;
+				var newBounds = new FCRect(m_dragBeginRect.left + offsetX, m_dragBeginRect.top + offsetY,
+					m_dragBeginRect.right + offsetX, m_dragBeginRect.bottom + offsetY);
+				m_draggingView.m_location = new FCPoint(newBounds.left, newBounds.top);
+				if (m_draggingView.m_parent) {
+					if (m_draggingView.m_parent.m_paint) {
+						invalidateView(m_draggingView.m_parent, m_draggingView.m_parent.m_paint);
+					}
+				} else {
+					if (m_draggingView.m_paint) {
+						invalidate(m_draggingView.m_paint);
+					}
+				}
+				if (m_draggingView && m_draggingView.m_allowDragScroll) {
+					evt.preventDefault && evt.preventDefault();
+					evt.returnValue = false;
+					evt.stopPropagation && evt.stopPropagation();
+				}
+			}
         }
         return false;
     };
