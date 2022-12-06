@@ -952,7 +952,7 @@ var mouseMoveChart = function(chart, firstTouch, secondTouch, firstPoint, second
 	    var newIndex = getChartIndex(chart, mp);
 	    if(newIndex >= 0 && newIndex < chart.m_data.length){
 	        var newDate = getChartDateByIndex(chart, newIndex);
-	        var newValue = getChartValue(chart, mp);
+            var newValue = getCandleDivValue(chart, mp);
             if (chart.m_selectPlotPoint == 0){
 	            chart.m_sPlot.m_key1 = newDate;
                 chart.m_sPlot.m_value1 = newValue;
@@ -964,7 +964,7 @@ var mouseMoveChart = function(chart, firstTouch, secondTouch, firstPoint, second
                 chart.m_sPlot.m_value3 = newValue;
 	        }
             else if (chart.m_startMovePlot){
-	            var bValue = getChartValue(chart, m_mouseDownPoint_Chart);
+                var bValue = getCandleDivValue(chart, m_mouseDownPoint_Chart);
 	            var bIndex = getChartIndex(chart, m_mouseDownPoint_Chart);
                 if (chart.m_sPlot.m_key1){
                     chart.m_sPlot.m_value1 = chart.m_sPlot.m_startValue1 + (newValue - bValue);
@@ -1353,6 +1353,35 @@ var getChartValue = function(chart, point){
         return chart.m_indMin + (chart.m_indMax - chart.m_indMin) * rate;
     }
     return 0;
+}
+
+/*
+* 根据坐标获取对应的值
+* chart:K线
+* point:坐标
+*/
+var getCandleDivValue = function (chart, point) {
+    var candleHeight = getCandleDivHeight(chart);
+    var rate = (candleHeight - chart.m_candlePaddingBottom - point.y) / (candleHeight - chart.m_candlePaddingTop - chart.m_candlePaddingBottom);
+    var cMin = chart.m_candleMin, cMax = chart.m_candleMax;
+    if (chart.m_vScaleType != "standard") {
+        if (cMax > 0) {
+            cMax = Math.log10(cMax);
+        } else if (cMax < 0) {
+            cMax = -Math.log10(Math.abs(cMax));
+        }
+        if (cMin > 0) {
+            cMin = Math.log10(cMin);
+        } else if (cMin < 0) {
+            cMin = -Math.log10(Math.abs(cMin));
+        }
+    }
+    var result = cMin + (cMax - cMin) * rate;
+    if (chart.m_vScaleType != "standard") {
+        return Math.pow(10, result);
+    } else {
+        return result;
+    }
 }
 
 /*
@@ -2844,7 +2873,7 @@ var drawChartPlot = function(chart, paint, clipRect) {
                 var newY = sY1 <= sY2 ? sY1 + (sY2 - sY1) * ranges[j] : sY2 + (sY1 - sY2) * (1 - ranges[j]);
                 paint.drawLine(plot.m_lineColor, plot.m_lineWidth, 0, chart.m_leftVScaleWidth, newY, chart.m_size.cx - chart.m_rightVScaleWidth, newY);
                 var newPoint = new FCPoint(0, newY);
-                var value = getChartValue(chart, newPoint);
+                var value = getCandleDivValue(chart, newPoint);
                 var str = value.toFixed(chart.m_candleDigit);
                 var tSize = paint.textSize(str, chart.m_font);
                 paint.drawText(str, chart.m_textColor, chart.m_font, chart.m_leftVScaleWidth + 2, newY - tSize.cy / 2 - 2);
