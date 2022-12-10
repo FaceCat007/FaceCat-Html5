@@ -487,32 +487,31 @@ var mouseUpTree = function (tree, firstTouch, secondTouch, firstPoint, secondPoi
 		if (row.m_visible) {
 			if (firstPoint.y >= cTop && firstPoint.y <= cTop + tree.m_rowHeight) {
 				var node = row.m_cells[0];
-				if(tree.onClickTreeNode){
-				    tree.onClickTreeNode(tree, node, firstTouch, secondTouch, firstPoint, secondPoint);
-				}else{
-				    var tLeft = cLeft + 2 + getTotalIndent(node);
-				    var wLeft = tLeft;
-				    if (tree.m_showCheckBox) {
-					    wLeft += tree.m_checkBoxWidth;
-					    if (firstPoint.x < wLeft) {
-						    checkOrUnCheckTreeNode(node, !node.m_checked);
-						    if(tree.m_paint){
-							    invalidateView(tree, tree.m_paint);
-						    }
-						    break;
-					    }
-				    }
-				    if (node.m_childNodes.length > 0) {
-					    wLeft += tree.m_collapsedWidth;
-					    if (firstPoint.x < wLeft) {
-						    node.m_collapsed = !node.m_collapsed;
-						    hideOrShowTreeNode(node, !node.m_collapsed);
-						    if(tree.m_paint){
-							    invalidateView(tree, tree.m_paint);
-						    }
-						    break;
-					    }
-				    }
+				var tLeft = cLeft + 2 + getTotalIndent(node);
+				var wLeft = tLeft;
+				if (tree.m_showCheckBox) {
+					wLeft += tree.m_checkBoxWidth;
+					if (firstPoint.x < wLeft) {
+						checkOrUnCheckTreeNode(node, !node.m_checked);
+						if (tree.m_paint) {
+							invalidateView(tree, tree.m_paint);
+						}
+						break;
+					}
+				}
+				if (node.m_childNodes.length > 0) {
+					wLeft += tree.m_collapsedWidth;
+					if (firstPoint.x < wLeft) {
+						node.m_collapsed = !node.m_collapsed;
+						hideOrShowTreeNode(node, !node.m_collapsed);
+						if (tree.m_paint) {
+							invalidateView(tree, tree.m_paint);
+						}
+						break;
+					}
+				}
+				if (tree.m_paint && tree.m_paint.onClickTreeNode) {
+					tree.m_paint.onClickTreeNode(tree, node, firstTouch, secondTouch, firstPoint, secondPoint);
 				}
 			}
 			cTop += tree.m_rowHeight;

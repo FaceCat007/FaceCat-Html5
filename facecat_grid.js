@@ -16,7 +16,8 @@ function FCGridColumn() {
 	this.m_borderColor = "rgb(100,100,100)"; //边线颜色
 	this.m_textColor = "rgb(200,200,200)"; //文字颜色
 	this.m_frozen = false; //是否冻结
-	this.m_sort = null; //排序模式
+	this.m_sort = "none"; //排序模式
+	this.m_allowSort = true; //是否允许排序
 	this.m_visible = true; //是否可见
 	this.m_index = -1; //索引
 	this.m_bounds = new FCRect(); //区域
@@ -126,6 +127,26 @@ var drawGridColumn = function (grid, column, paint, left, top, right, bottom) {
 		paint.drawRect(column.m_borderColor, 1, 0, left, top, right, bottom);
 	}
 	paint.drawText(column.m_text, column.m_textColor, column.m_font, left + (column.m_width - tSize.cx) / 2, top + grid.m_headerHeight / 2);
+	if (column.m_sort == "asc") {
+		paint.beginPath();
+		var cR = (bottom - top) / 4
+		var oX = right - cR * 2, oY = top + (bottom - top) / 2
+		paint.addLine(oX, oY - cR, oX - cR, oY + cR);
+		paint.addLine(oX - cR, oY + cR, oX + cR, oY + cR);
+		paint.addLine(oX + cR, oY + cR, oX, oY - cR);
+		paint.fillPath(column.m_textColor);
+		paint.closePath();
+	}
+	else if (column.m_sort == "desc") {
+		paint.beginPath();
+		var cR = (bottom - top) / 4
+		var oX = right - cR * 2, oY = top + (bottom - top) / 2
+		paint.addLine(oX, oY + cR, oX - cR, oY - cR);
+		paint.addLine(oX - cR, oY - cR, oX + cR, oY - cR);
+		paint.addLine(oX + cR, oY - cR, oX, oY + cR);
+		paint.fillPath(column.m_textColor);
+		paint.closePath();
+    }
 };
 
 /*
@@ -614,8 +635,8 @@ var mouseUpGrid = function (grid, firstTouch, secondTouch, firstPoint, secondPoi
 											subRow.m_selected = false
 										}
 									}
-									if (grid.onClickGridCell) {
-							            grid.onClickGridCell(grid, row, gridColumn, cell, firstTouch, secondTouch, firstPoint, secondPoint);
+									if (grid.m_paint && grid.m_paint.onClickGridCell) {
+										grid.m_paint.onClickGridCell(grid, row, gridColumn, cell, firstTouch, secondTouch, firstPoint, secondPoint);
 							        }
 							        return;
 							    }
@@ -664,8 +685,8 @@ var mouseUpGrid = function (grid, firstTouch, secondTouch, firstPoint, secondPoi
 											subRow.m_selected = false
 										}
 									}
-									if (grid.onClickGridCell) {
-							            grid.onClickGridCell(grid, row, gridColumn, cell, firstTouch, secondTouch, firstPoint, secondPoint);
+									if (grid.m_paint && grid.m_paint.onClickGridCell) {
+										grid.m_paint.onClickGridCell(grid, row, gridColumn, cell, firstTouch, secondTouch, firstPoint, secondPoint);
 							        }
 							        return;
 							    }
@@ -685,11 +706,54 @@ var mouseUpGrid = function (grid, firstTouch, secondTouch, firstPoint, secondPoi
 		for (i = 0; i < grid.m_columns.length; i++) {
 			var gridColumn = grid.m_columns[i];
 			if (grid.m_columns[i].m_visible) {
-				if (!gridColumn.m_frozen) {
-				    if(firstPoint.x >= cLeft && firstPoint.x <= cLeft + gridColumn.m_width){
-				        if(grid.onClickGridColumn){
-				            grid.onClickGridColumn(grid, gridColumn, firstTouch, secondTouch, firstPoint, secondPoint);
-				        }
+				if (gridColumn.m_frozen) {
+					if (firstPoint.x >= cLeft && firstPoint.x <= cLeft + gridColumn.m_width) {
+						for (j = 0; j < grid.m_columns.length; j++) {
+							tColumn = grid.m_columns[j]
+							if (tColumn == gridColumn) {
+								if (tColumn.m_allowSort) {
+									if (tColumn.m_sort == "none" || tColumn.m_sort == "desc") {
+										tColumn.m_sort = "asc";
+										grid.m_rows.sort((m, n) => {
+											if (m.m_cells.length > j && n.m_cells.length > j) {
+												if (m.m_cells[j].m_value < n.m_cells[j].m_value) {
+													return -1;
+												}
+												else if (m.m_cells[j].m_value > n.m_cells[j].m_value) {
+													return 1;
+												}
+												else return 0;
+											}
+											else {
+												return 0;
+											}
+										});
+									} else {
+										tColumn.m_sort = "desc";
+										grid.m_rows.sort((m, n) => {
+											if (m.m_cells.length > j && n.m_cells.length > j) {
+												if (m.m_cells[j].m_value > n.m_cells[j].m_value) {
+													return -1;
+												}
+												else if (m.m_cells[j].m_value < n.m_cells[j].m_value) {
+													return 1;
+												}
+												else return 0;
+											} else {
+												return 0;
+											}
+										});
+									}
+								} else {
+									tColumn.m_sort = "none";
+                                }
+							} else {
+								tColumn.m_sort = "none";
+							}
+						}
+						if (grid.m_paint && grid.m_paint.onClickGridColumn) {
+							grid.m_paint.onClickGridColumn(grid, gridColumn, firstTouch, secondTouch, firstPoint, secondPoint);
+						}
 				        return;
 				    }
 				}
@@ -700,11 +764,53 @@ var mouseUpGrid = function (grid, firstTouch, secondTouch, firstPoint, secondPoi
 		for (i = 0; i < grid.m_columns.length; i++) {
 			var gridColumn = grid.m_columns[i];
 			if (grid.m_columns[i].m_visible) {
-				if (gridColumn.m_frozen) {
-			        if(firstPoint.x >= cLeft && firstPoint.x <= cLeft + gridColumn.m_width){
-				        if(grid.onClickGridColumn){
-				            grid.onClickGridColumn(grid, gridColumn, firstTouch, secondTouch, firstPoint, secondPoint);
-				        }
+				if (!gridColumn.m_frozen) {
+					if (firstPoint.x >= cLeft && firstPoint.x <= cLeft + gridColumn.m_width) {
+						for (j = 0; j < grid.m_columns.length; j++) {
+							tColumn = grid.m_columns[j]
+							if (tColumn == gridColumn) {
+								if (tColumn.m_allowSort) {
+									if (tColumn.m_sort == "none" || tColumn.m_sort == "desc") {
+										tColumn.m_sort = "asc";
+										grid.m_rows.sort((m, n) => {
+											if (m.m_cells.length > j && n.m_cells.length > j) {
+												if (m.m_cells[j].m_value < n.m_cells[j].m_value) {
+													return -1;
+												}
+												else if (m.m_cells[j].m_value > n.m_cells[j].m_value) {
+													return 1;
+												}
+												else return 0;
+											} else {
+												return 0;
+                                            }
+										});
+									} else {
+										tColumn.m_sort = "desc";
+										grid.m_rows.sort((m, n) => {
+											if (m.m_cells.length > j && n.m_cells.length > j) {
+												if (m.m_cells[j].m_value > n.m_cells[j].m_value) {
+													return -1;
+												}
+												else if (m.m_cells[j].m_value < n.m_cells[j].m_value) {
+													return 1;
+												}
+												else return 0;
+											} else {
+												return 0;
+											}
+										});
+									}
+								} else {
+									tColumn.m_sort = "none";
+								}
+							} else {
+								tColumn.m_sort = "none";
+							}
+						}
+						if (grid.m_paint && grid.m_paint.onClickGridColumn) {
+							grid.m_paint.onClickGridColumn(grid, gridColumn, firstTouch, secondTouch, firstPoint, secondPoint);
+						} 
 				        return;
 				    }
 				}

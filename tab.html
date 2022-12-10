@@ -112,7 +112,7 @@ canvas { position:fixed;left:0px;top:0px; }
                 tabPage.m_visible = false;
             }
             tabPage.m_size = new FCSize(100, 100);
-            tabPage.m_location = new FCSize(0, 0);
+            tabPage.m_location = new FCPoint(0, 0);
             tabPage.m_borderColor = null;
             tabPage.m_parent = m_tabView;
             var tabButton = new FCView();
@@ -121,7 +121,7 @@ canvas { position:fixed;left:0px;top:0px; }
             tabButton.m_text = "第" + (i + 1) + "页";
             tabButton.m_visible = true;
             tabButton.m_size = new FCSize(m_tabView.m_size.cx / 4, 40);
-            tabButton.m_location = new FCSize(0, 0);
+            tabButton.m_location = new FCPoint(0, 0);
 	        tabButton.m_textColor = "rgb(0,0,0)";
             if(i == 0){
                 tabPage.m_backColor = "rgb(255,0,0)";
