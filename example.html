@@ -428,7 +428,7 @@ canvas { position:fixed;left:0px;top:0px; }
     * firstPoint:第一次触摸的坐标
     * secondPoint:第二次触摸的坐标
     */
-    m_exampleList.onClickGridCell = function(grid, row, column, cell, firstTouch, secondTouch, firstPoint, secondPoint){
+    m_paintExample.onClickGridCell = function(grid, row, column, cell, firstTouch, secondTouch, firstPoint, secondPoint){
         if(firstPoint.x >= grid.m_size.cx * 0.6 + cell.m_diffX && firstPoint.x <= grid.m_size.cx * 0.6 + cell.m_diffX * 2){
             window.location.href = cell.m_link + "?color=light";
         }else if(firstPoint.x >= grid.m_size.cx * 0.6 && firstPoint.x <= grid.m_size.cx * 0.6 + cell.m_diffX){
