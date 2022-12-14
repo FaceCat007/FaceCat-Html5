@@ -225,7 +225,7 @@ function FCPaint() {
 		this.m_context.setLineDash([]);
 	};
 	/*
-	* 绘制文字大小
+	* 绘制文字
 	* text:文字
 	* color:颜色
 	* font:字体
@@ -353,7 +353,7 @@ function FCPaint() {
 		this.m_context.restore();
 	};
     /*
-	* 绘制文字大小
+	* 绘制文字
 	* text:文字
 	* color:颜色
 	* font:字体
