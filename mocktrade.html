@@ -1,0 +1,271 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+<meta http-equiv="pragma" content="no-cache"/> 
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"/> 
+<meta http-equiv="expires" content="0"/>
+    <title>FaceCat</title>
+</head>
+<body>
+    <script type="text/javascript">
+        /*
+         * 调用API
+         * url地址
+         */
+        function callFaceCatAPI(url) {
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("GET", "http://127.0.0.1:9962?facecatid=app_SimTrading&" + url, false);
+            xmlhttp.send(null);
+            return xmlhttp.responseText;
+        }
+
+	/*
+	* 追加资金
+	* accountid 账户ID
+	* cash 资金
+    */
+	var addFund = function (accountid, cash) { 
+        return callFaceCatAPI("func=addfund&accountid=" + accountid + "&cash=" + cash);
+	}
+
+	/*
+	* 添加委托
+	* accountid 账户ID
+	* code 代码
+	* name 名称
+	* ordertype 委托类型
+	* direction 方向
+	* price 价格
+	* volume 数量
+	* margin 保证金
+	* 返回 委托ID
+	*/
+	var addOrder = function (accountid, code, name, ordertype, direction, price, volume, margin) {
+        return callFaceCatAPI("func=addorder&accountid=" + accountid + "&code=" + code + "&name=" + name + "&ordertype=" + ordertype + "&direction=" + direction + "&price=" + price + "&volume=" + volume + "&margin=" + margin);
+	}
+
+	/*
+	* 添加成交
+	* accountid 账户ID
+	* code 代码
+	* name 名称
+	* ordertype 委托类型
+	* orderid 委托ID
+	* direction 方向
+	* price 价格
+	* volume 数量
+	* amount 数额
+	* commision *手续费
+	* 返回 成交ID
+    */
+	var addTrade = function (accountid, code, name, ordertype, orderid, direction, price, volume, amount, commision) {
+        return callFaceCatAPI("func=addtrade&accountid=" + accountid + "&code=" + code + "&name=" + name + "&ordertype=" + ordertype + "&orderid=" + + "&direction=" + direction + "&price=" + price + "&volume=" + volume + "&amount=" + amount + "&commision=" + commision);
+	}
+
+	/*
+	* 添加持仓
+	* accountid 账户ID
+	* code 代码
+	* name 名称
+	* price 价格
+	* volume 数量
+	* direction 方向
+	* margin 保证金
+	* commision 手续费
+    */
+	var addPosition = function (accountid, code, name, price, volume, direction, margin, commision) {
+        return callFaceCatAPI("func=addposition&accountid=" + accountid + "&code=" + code + "&name=" + name + "&price=" + price + "&volume=" + volume + "&direction=" + direction + "&margin=" + margin + "&commision=20" + commision);
+	}
+
+	/*
+	*买入交易
+	* accountid 账户ID
+	* code 代码
+	* name 名称
+	* price 数量
+	* volume 数量
+	* direction 方向
+	* margin 保证金
+	* commision 手续费
+    */
+	var buy = function (accountid, code, name, ordertype, direction, price, volume, amount, margin, commision) {
+        return callFaceCatAPI("func=buy&accountid=" + accountid + "&code=" + code + "&name=" + name + "&price=" + price + "&volume=" + volume + "&orderType=" + ordertype + "&direction=" + direction + "&margin=" + margin + "&commision=" + commision);
+	}
+
+	/*
+	* 创建账户
+    */
+	var createAccount = function () {
+        return callFaceCatAPI("func=createaccount");
+	}
+
+	/*
+	 * 当前账户
+	 */
+	var getCurrentAccount = function () {
+        return callFaceCatAPI("func=getcurrentaccount");
+	}
+
+	/*
+	* 指定账户
+	* accountid 账户ID
+    */
+	var getFund = function (accountid) {
+        return callFaceCatAPI("func=getfund&accountid=" + accountid);
+	}
+
+	/*
+	* 所有账户
+    */
+	var getAllFunds = function () {
+        return callFaceCatAPI("func=getallfunds");
+	}
+
+	/*
+	* 持仓列表
+	* accountid 账户ID
+    */ 
+    var getPositionsByAccount = function (accountid) {
+        return callFaceCatAPI("func=getpositionsbyaccount&accountid=" + accountid);
+	}
+
+	/*
+	*新的委托
+	* accountid 账户ID
+    */
+	var getNewOrders = function (accountid) {
+        return callFaceCatAPI("func=getnewtrades&accountid=" + accountid);
+	}
+
+	/*
+	 * 新的持仓
+	 *accountid 账户ID
+	 */
+	var getNewPositions = function (accountid) {
+        return callFaceCatAPI("func=getnewpositions&accountid=" + accountid);
+	}
+
+	/*
+	 * 新的成交
+	 * accountid 账户ID
+	 */
+	var getNewTrades = function (accountid) {
+        return callFaceCatAPI("func=getnewtrades&accountid=" + accountid);
+	}
+
+	/*
+	* 委托列表
+	* accountid 账户ID
+    */
+	var getOrdersByAccount = function (accountid) {
+        return callFaceCatAPI("func=getordersbyaccount&accountid=" + accountid);
+	}
+
+	/*
+	*成交列表
+	*accountid 账户ID
+    */
+	var getTradesByAccount = function (accountid) {
+        return callFaceCatAPI("func=gettradesbyaccount&accountid=" + accountid);
+	}
+
+	/*
+	 * 锁定界面
+	 * accountid 账户ID
+	 */
+	var lockUI = function (accountid) {
+        return callFaceCatAPI("func=lockui&accountid=" + accountid);
+	}
+
+	/*
+	* 移除账户
+	* accountid 账户ID
+    */
+	var removeAccount = function (accountid) {
+        return callFaceCatAPI("func=removeaccount&accountid=" + accountid);
+	}
+
+	/*
+	* 删除成交
+	* accountid 账户ID
+	* tradeid 成交ID
+    */
+	var removeTrade = function (accountid, tradeid) {
+        return callFaceCatAPI("func=removetrade&accountid=" + accountid + "&tradeid=" + tradeid);
+	}
+
+	/*
+	 * 撤销委托
+	 * accountid 账户ID
+	 * orderid 委托ID
+	 */
+	var removeOrder = function (accountid, orderid) {
+        return callFaceCatAPI("func=removeorder&accountid=" + accountid + "&orderid=" + orderid);
+	}
+
+	/*
+	* 减少持仓
+	* accountid 账户ID
+	* code 代码
+	* name 名称
+	* price 价格
+	* volume 数量
+	* direction 方向
+	* margin 保证金
+	* commision 手续费
+    */
+	var reducePosition = function (accountid, code, name, price, volume, direction, margin, commision) {
+        return callFaceCatAPI("func=reduceposition&accountid=" + accountid + "&code=" + code + "&name=" + name + "&price=" + price + "&volume=" + volume + "&direction=" + direction + "&margin=" + margin + "&commision=20" + commision);
+	}
+
+	/*
+	* 卖出交易
+	* accountid 账户ID
+	* code 代码
+	* name 名称
+	* price 数量
+	* volume 数量
+	* direction 方向
+	* margin 保证金
+	* commision 手续费
+    */
+	var sell = function (accountid, code, name, ordertype, direction, price, volume, amount, margin, commision) {
+        return callFaceCatAPI("func=sell&accountid=" + accountid + "&code=" + code + "&name=" + name + "&price=" + price + "&volume=" + volume + "&orderType=" + ordertype + "&direction=" + direction + "&margin=" + margin + "&commision=" + commision);
+	}
+
+	/*
+	* 更新价格
+	* accountid 账户ID
+	* code 代码
+	* direction *方向
+	* marketprice *市价
+	* marketvalue *市值
+    */
+	var setMarketValue = function (accountid, code, direction, marketprice, marketvalue) {
+        return callFaceCatAPI("func=setmarketvalue&accountid=" + accountid + "&code=" + code + "&direction=" + direction + "&marketprice=" + marketprice + "&marketvalue=" + marketvalue);
+	}
+
+	/*
+	* 解锁界面
+	* accountid 账户ID
+    */
+	var unLockUI = function (accountid) {
+        return callFaceCatAPI("func=unlockui&accountid=" + accountid);
+	}
+
+	for (var i = 0; i < 1000; i++) {
+        account = createAccount()
+        addFund(account, 100000)
+        buy(account, "601857", "中国石油", "买入", "B", 48.5, 200, 9700, 9700, 97)
+        buy(account, "600018", "中国石化", "买入", "B", 48.5, 200, 9700, 9700, 97)
+        buy(account, "002214", "大立科技", "买入", "B", 48.5, 200, 9700, 9700, 97)
+        buy(account, "000002", "万科", "买入", "B", 48.5, 200, 9700, 9700, 97)
+        sell(account, "601857", "中国石油", "买入", "B", 48.5, 200, 9700, 9700, 97)
+        sell(account, "600018", "中国石化", "买入", "B", 48.5, 200, 9700, 9700, 97)
+        sell(account, "002214", "大立科技", "买入", "B", 48.5, 200, 9700, 9700, 97)
+        sell(account, "000002", "万科", "买入", "B", 48.5, 200, 9700, 9700, 97)
+    }
+    </script>
+</body>
+</html>
