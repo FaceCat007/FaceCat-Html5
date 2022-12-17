@@ -90,7 +90,7 @@
 	* commision 手续费
     */
 	var buy = function (accountid, code, name, ordertype, direction, price, volume, amount, margin, commision) {
-        return callFaceCatAPI("func=buy&accountid=" + accountid + "&code=" + code + "&name=" + name + "&price=" + price + "&volume=" + volume + "&orderType=" + ordertype + "&direction=" + direction + "&margin=" + margin + "&commision=" + commision);
+        return callFaceCatAPI("func=buy&accountid=" + accountid + "&code=" + code + "&name=" + name + "&price=" + price + "&volume=" + volume + "&ordertype=" + ordertype + "&direction=" + direction + "&margin=" + margin + "&commision=" + commision);
 	}
 
 	/*
@@ -231,7 +231,7 @@
 	* commision 手续费
     */
 	var sell = function (accountid, code, name, ordertype, direction, price, volume, amount, margin, commision) {
-        return callFaceCatAPI("func=sell&accountid=" + accountid + "&code=" + code + "&name=" + name + "&price=" + price + "&volume=" + volume + "&orderType=" + ordertype + "&direction=" + direction + "&margin=" + margin + "&commision=" + commision);
+        return callFaceCatAPI("func=sell&accountid=" + accountid + "&code=" + code + "&name=" + name + "&price=" + price + "&volume=" + volume + "&ordertype=" + ordertype + "&direction=" + direction + "&margin=" + margin + "&commision=" + commision);
 	}
 
 	/*
