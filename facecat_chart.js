@@ -69,18 +69,22 @@ function FCChart() {
     this.m_volMin = 0; //成交量层的最小值
     this.m_indMax = 0; //指标层的最大值
     this.m_indMin = 0; //指标层的最小值
+    this.m_indMax2 = 0; //指标层2的最大值
+    this.m_indMin2 = 0; //指标层2的最小值
     this.m_crossTipColor = "rgb(50,50,50)"; //十字线标识的颜色
     this.m_crossLineColor = "rgb(100,100,100)"; //十字线的颜色
     this.m_font = "12px Arial"; //字体
     this.m_candleDigit = 2; //K线层保留小数的位数
     this.m_volDigit = 0; //成交量层保留小数的位数
     this.m_indDigit = 2; //指标层保留小数的位数
+    this.m_indDigit2 = 2; //指标层2保留小数的位数
     this.m_lastRecordIsVisible = true; //最后记录是否可见
     this.m_lastVisibleKey = 0; //最后可见的主键
     this.m_autoFillHScale = false; //是否填充满X轴
     this.m_candleDivPercent = 0.5; //K线层的占比
     this.m_volDivPercent = 0.2; //成交量层的占比
     this.m_indDivPercent = 0.3; //指标层的占比
+    this.m_indDivPercent2 = 0.0; //指标层2的占比
     this.m_mainIndicator = "MA"; //主图指标
     this.m_showIndicator = "MACD"; //显示指标
     this.m_gridColor = "rgba(255,0,0,0.5)"; //网格颜色 
@@ -92,6 +96,8 @@ function FCChart() {
     this.m_volPaddingBottom = 0; //成交量层的下边距
     this.m_indPaddingTop = 20; //指标层的上边距
     this.m_indPaddingBottom = 20; //指标层的下边距
+    this.m_indPaddingTop2 = 20; //指标层2的上边距
+    this.m_indPaddingBottom2 = 20; //指标层2的下边距
     this.m_vScaleDistance = 35; //纵轴的间隔
     this.m_vScaleType = "standard"; //纵轴的类型 log10代表指数坐标
     this.m_plots = new Array(); //画线的集合
@@ -1213,6 +1219,19 @@ var getIndDivHeight = function(chart){
 };
 
 /*
+* 获取指标层2的高度
+* chart:K线
+*/
+var getIndDivHeight2 = function (chart) {
+    var height = chart.m_size.cy - chart.m_hScaleHeight;
+    if (height > 0) {
+        return height * chart.m_indDivPercent2;
+    } else {
+        return 0;
+    }
+};
+
+/*
 * 获取横向工作区
 * chart:K线
 */
@@ -1311,6 +1330,18 @@ var getChartY = function(chart, divIndex, value){
             return 0;
         }
     }
+    else if (divIndex == 3) {
+        if (chart.m_indMax2 > chart.m_indMin2) {
+            var rate = (value - chart.m_indMin2) / (chart.m_indMax2 - chart.m_indMin2);
+            var candleHeight = getCandleDivHeight(chart);
+            var volHeight = getVolDivHeight(chart);
+            var indHeight = getIndDivHeight(chart);
+            var indHeight2 = getIndDivHeight2(chart);
+            return candleHeight + volHeight + indHeight + indHeight2 - chart.m_indPaddingBottom2 - (indHeight2 - chart.m_indPaddingTop2 - chart.m_indPaddingBottom2) * rate;
+        } else {
+            return 0;
+        }
+    }
     return 0;
 };
 
@@ -1323,6 +1354,7 @@ var getChartValue = function(chart, point){
     var candleHeight = getCandleDivHeight(chart);
     var volHeight = getVolDivHeight(chart);
     var indHeight = getIndDivHeight(chart);
+    var indHeight2 = getIndDivHeight(chart);
     if(point.y <= candleHeight){
         var rate = (candleHeight - chart.m_candlePaddingBottom - point.y) / (candleHeight - chart.m_candlePaddingTop - chart.m_candlePaddingBottom);
         var cMin = chart.m_candleMin, cMax = chart.m_candleMax;
@@ -1351,6 +1383,9 @@ var getChartValue = function(chart, point){
     }else if(point.y > candleHeight + volHeight && point.y <= candleHeight + volHeight + indHeight){
         var rate = (indHeight - chart.m_indPaddingBottom - (point.y - candleHeight - volHeight)) / (indHeight - chart.m_indPaddingTop - chart.m_indPaddingBottom);
         return chart.m_indMin + (chart.m_indMax - chart.m_indMin) * rate;
+    } else if (point.y > candleHeight + volHeight + indHeight && point.y <= candleHeight + volHeight + indHeight + indHeight2) {
+        var rate = (indHeight2 - chart.m_indPaddingBottom2 - (point.y - candleHeight - volHeight - indHeight)) / (indHeight2 - chart.m_indPaddingTop2 - chart.m_indPaddingBottom2);
+        return chart.m_indMin2 + (chart.m_indMax2 - chart.m_indMin2) * rate;
     }
     return 0;
 }
@@ -1735,11 +1770,15 @@ var drawChartScale = function(chart, paint, clipRect) {
     var candleDivHeight = getCandleDivHeight(chart);
     var volDivHeight = getVolDivHeight(chart);
     var indDivHeight = getIndDivHeight(chart);
+    var indDivHeight2 = getIndDivHeight2(chart);
     if(volDivHeight > 0){
         paint.drawLine(chart.m_scaleColor, m_lineWidth_Chart, 0, chart.m_leftVScaleWidth, candleDivHeight, chart.m_size.cx - chart.m_rightVScaleWidth, candleDivHeight);
     }
     if(indDivHeight > 0){
         paint.drawLine(chart.m_scaleColor, m_lineWidth_Chart, 0, chart.m_leftVScaleWidth, candleDivHeight + volDivHeight, chart.m_size.cx - chart.m_rightVScaleWidth, candleDivHeight + volDivHeight);
+    }
+    if(indDivHeight2 > 0) {
+        paint.drawLine(chart.m_scaleColor, m_lineWidth_Chart, 0, chart.m_leftVScaleWidth, candleDivHeight + volDivHeight + indDivHeight, chart.m_size.cx - chart.m_rightVScaleWidth, candleDivHeight + volDivHeight + indDivHeight);
     }
     chartGridScale(chart.m_candleMin, chart.m_candleMax,  (candleDivHeight - chart.m_candlePaddingTop - chart.m_candlePaddingBottom) / 2, chart.m_vScaleDistance, chart.m_vScaleDistance / 2, parseInt((candleDivHeight - chart.m_candlePaddingTop - chart.m_candlePaddingBottom) / chart.m_vScaleDistance)); 
     if(m_gridStep_Chart > 0){
