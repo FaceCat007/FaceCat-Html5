@@ -608,6 +608,19 @@ canvas { position:fixed;left:0px;top:0px; }
                     else if(type == "tabpage"){
                         view = new FCTabPage();
                     }
+                    else if (type == "radio") {
+                        view = new FCRadioButton();
+                    }
+                    else if (type == "text") {
+                        view = new FCTextBox();
+                    }
+                    else if (type == "checkbox") {
+                        view = new FCCheckBox();
+                    } else if (type == "range") {
+                        view = new FCSpin();
+                    } else if (type == "datetime") {
+                        view = new FCDatePicker();
+                    }
                     else{
                         view = new FCDiv();
                     }
@@ -615,7 +628,7 @@ canvas { position:fixed;left:0px;top:0px; }
                 else if(nodeName == "select"){
                     view = new FCComboBox();
                 }
-                else if (nodeName == "input" || nodeName == "text"){
+                else if (nodeName == "input"){
                     type = child.getAttribute("type");
                     if(type == "radio"){
                         view = new FCRadioButton();
