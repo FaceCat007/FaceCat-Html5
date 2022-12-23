@@ -960,18 +960,19 @@ var addMouseMoveEvent2 =  function(canvas, callBack, enterCallBack, leaveCallBac
 			else {
 	            var view = findView(mp, canvas.m_views);
 	            var cmp = new FCPoint(mp.x - clientX(view), mp.y - clientY(view));
-	            if(view) {
-	                if(!m_mouseMoveView || m_mouseMoveView != view){
-	                    if(enterCallBack){
-	                        enterCallBack(view, cmp, 0, 0, 0);
-	                    }
+				if (view) {
+					oldMouseMoveView = m_mouseMoveView
+					m_mouseMoveView = view;
+					if (oldMouseMoveView != None && oldMouseMoveView != view) {
+						if (leaveCallBack) {
+							leaveCallBack(oldMouseMoveView, cmp, 0, 0, 0);
+						}
 					}
-					if (m_mouseMoveView) {
-	                    if(leaveCallBack){
-							leaveCallBack(m_mouseMoveView, cmp, 0, 0, 0);
-	                    }
-	                }
-	                m_mouseMoveView = view;
+					if (oldMouseMoveView == None || oldMouseMoveView != view) {
+						if (enterCallBack) {
+							enterCallBack(view, cmp, 0, 0, 0);
+						}
+                    }
 	                if(callBack){
 		                callBack(view, cmp, 0, 0, 0);
 		            }
