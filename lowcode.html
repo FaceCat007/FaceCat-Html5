@@ -594,7 +594,7 @@ canvas { position:fixed;left:0px;top:0px; }
                 var view = null;
                 var type = "";
                 var nodeName = child.nodeName.toLowerCase();
-                if(nodeName == "div"){
+                if (nodeName == "div" || nodeName == "view"){
                     type = child.getAttribute("type");
                     if(type == "splitlayout"){
                         view = new FCSplitLayoutDiv();
@@ -615,7 +615,7 @@ canvas { position:fixed;left:0px;top:0px; }
                 else if(nodeName == "select"){
                     view = new FCComboBox();
                 }
-                else if(nodeName == "input"){
+                else if (nodeName == "input" || nodeName == "text"){
                     type = child.getAttribute("type");
                     if(type == "radio"){
                         view = new FCRadioButton();
