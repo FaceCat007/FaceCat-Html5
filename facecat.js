@@ -965,9 +965,10 @@ var addMouseMoveEvent2 =  function(canvas, callBack, enterCallBack, leaveCallBac
 	                    if(enterCallBack){
 	                        enterCallBack(view, cmp, 0, 0, 0);
 	                    }
-	                }else if(m_mouseMoveView){
+					}
+					if (m_mouseMoveView) {
 	                    if(leaveCallBack){
-	                        leaveCallBack(view, cmp, 0, 0, 0);
+							leaveCallBack(m_mouseMoveView, cmp, 0, 0, 0);
 	                    }
 	                }
 	                m_mouseMoveView = view;
