@@ -430,7 +430,7 @@ function FCView() {
 	this.m_clipRect = null; //裁剪区域
 	this.m_image = null; //图片
 	this.m_font = "12px Arial"; //字体
-	this.m_hoveredColor = "none"; //鼠标悬停时的颜色
+	this.m_hoveredColor = null; //鼠标悬停时的颜色
 	this.m_pushedColor = "rgb(100,100,100)"; //鼠标按下时的颜色
 	this.m_allowDrag = false; //是否允许拖动
 };

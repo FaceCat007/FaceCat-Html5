@@ -112,11 +112,23 @@ var clickRadioButton = function(radioButton, mp){
 */
 var drawButton = function (button, paint, clipRect) {
     if (button == m_mouseDownView) {
-        paint.fillRect(button.m_pushedColor, 0, 0, button.m_size.cx, button.m_size.cy);
+        if (button.m_pushedColor) {
+            paint.fillRect(button.m_pushedColor, 0, 0, button.m_size.cx, button.m_size.cy);
+        } else {
+            if (button.m_backColor) {
+                paint.fillRect(button.m_backColor, 0, 0, button.m_size.cx, button.m_size.cy);
+            }
+        }
     } else if (button == m_mouseMoveView) {
-        paint.fillRect(button.m_hoveredColor, 0, 0, button.m_size.cx, button.m_size.cy);
+        if (button.m_hoveredColor) {
+            paint.fillRect(button.m_hoveredColor, 0, 0, button.m_size.cx, button.m_size.cy);
+        } else {
+            if (button.m_backColor) {
+                paint.fillRect(button.m_backColor, 0, 0, button.m_size.cx, button.m_size.cy);
+            }
+        }
     }
-	else if(button.m_backColor){
+    else if (button.m_backColor) {
         paint.fillRect(button.m_backColor, 0, 0, button.m_size.cx, button.m_size.cy);
     }
     if(button.m_backImage && button.m_backImage.length > 0){

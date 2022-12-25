@@ -120,6 +120,7 @@ html, body { height: 100%; width: 100%; }
         firstView.m_backColor = "rgb(255,0,0)";
         firstView.m_location = new FCPoint(0, 0);
         firstView.m_size = new FCSize(0, 0);
+        firstView.m_name = "firstview";
         addViewToParent(firstView, m_split);
         m_split.m_firstView = firstView;
         
@@ -127,6 +128,7 @@ html, body { height: 100%; width: 100%; }
         secondView.m_backColor = "rgb(0,255,0)";
         secondView.m_location = new FCPoint(0, 0);
         secondView.m_size = new FCSize(0, 0);
+        secondView.m_name = "secondview";
         addViewToParent(secondView, m_split);
         m_split.m_secondView = secondView;
         m_split.m_oldSize = new FCSize(m_canvasSizeSplit.cx, m_canvasSizeSplit.cy);
@@ -373,14 +375,6 @@ html, body { height: 100%; width: 100%; }
             m_splitter.m_size = new FCSize(m_canvasSizeSplit.cx, 5);
         }
         resetSplitLayoutDiv(m_split);
-        console.log(m_split.m_firstView.m_location.x);
-        console.log(m_split.m_firstView.m_location.y);
-        console.log(m_split.m_firstView.m_size.cx);
-        console.log(m_split.m_firstView.m_size.cy);
-        console.log(m_split.m_secondView.m_location.x);
-        console.log(m_split.m_secondView.m_location.y);
-        console.log(m_split.m_secondView.m_size.cx);
-        console.log(m_split.m_secondView.m_size.cy);
 	    invalidate(m_paintSplit);
     };
     
