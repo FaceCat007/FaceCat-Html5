@@ -2932,6 +2932,7 @@ var drawChartPlot = function(chart, paint, clipRect) {
 var drawChartStock = function(chart, paint, clipRect) {
     if (chart.m_data && chart.m_data.length > 0) {   
         var candleHeight = getCandleDivHeight(chart);
+        var volHeight = getVolDivHeight(chart);
         var indHeight = getIndDivHeight(chart);
         var isTrend = chart.m_cycle == "trend";
         var cWidth = parseInt(chart.m_hScalePixel - 3) / 2;
@@ -2966,16 +2967,22 @@ var drawChartStock = function(chart, paint, clipRect) {
             var close = chart.m_data[i].m_close;
             var high = chart.m_data[i].m_high;
             var low = chart.m_data[i].m_low;
-            var volume = chart.m_data[i].m_volume;
             var openY = getChartY(chart, 0, open);
             var closeY = getChartY(chart, 0, close);
             var highY = getChartY(chart, 0, high);
             var lowY = getChartY(chart, 0, low);
-            var volY = getChartY(chart, 1, volume);
-            var zeroY = getChartY(chart, 1, 0);
+            var volY = 0;
+            var zeroY = 0; 
+            if (volHeight > 0) {
+                var volume = chart.m_data[i].m_volume;
+                volY = getChartY(chart, 1, volume);
+                zeroY = getChartY(chart, 1, 0);
+            }
             if (close >= open) {
                 if (isTrend) {
-                    paint.drawLine(m_indicatorColors[6], m_lineWidth_Chart, 0, x, volY, x, zeroY);
+                    if (volHeight > 0) {
+                        paint.drawLine(m_indicatorColors[6], m_lineWidth_Chart, 0, x, volY, x, zeroY);
+                    }
                 } else {
                     paint.drawLine(chart.m_upColor, m_lineWidth_Chart, 0, x, highY, x, lowY);
                     if (cWidth > 0) {
@@ -2985,22 +2992,31 @@ var drawChartStock = function(chart, paint, clipRect) {
                         else {
                             paint.fillRect(chart.m_upColor, x - cWidth, closeY, x + cWidth, openY);
                         }
-                        paint.fillRect(chart.m_upColor, x - cWidth, volY, x + cWidth, zeroY);
-
+                        if (volHeight > 0) {
+                            paint.fillRect(chart.m_upColor, x - cWidth, volY, x + cWidth, zeroY);
+                        }
                     } else {
-                        paint.drawLine(chart.m_upColor, m_lineWidth_Chart, 0, x - cWidth, volY, x + cWidth, zeroY);
+                        if (volHeight > 0) {
+                            paint.drawLine(chart.m_upColor, m_lineWidth_Chart, 0, x - cWidth, volY, x + cWidth, zeroY);
+                        }
                     }
                 }
             } else {
                 if (isTrend) {
-                    paint.drawLine(m_indicatorColors[6], m_lineWidth_Chart, 0, x, volY, x, zeroY);
+                    if (volHeight > 0) {
+                        paint.drawLine(m_indicatorColors[6], m_lineWidth_Chart, 0, x, volY, x, zeroY);
+                    }
                 } else {
                     paint.drawLine(chart.m_downColor, m_lineWidth_Chart, 0, x, highY, x, lowY);
                     if (cWidth > 0) {
                         paint.fillRect(chart.m_downColor, x - cWidth, openY, x + cWidth, closeY);
-                        paint.fillRect(chart.m_downColor, x - cWidth, volY, x + cWidth, zeroY);
+                        if (volHeight > 0) {
+                            paint.fillRect(chart.m_downColor, x - cWidth, volY, x + cWidth, zeroY);
+                        }
                     } else {
-                        paint.drawLine(chart.m_downColor, m_lineWidth_Chart, 0, x - cWidth, volY, x + cWidth, zeroY);
+                        if (volHeight > 0) {
+                            paint.drawLine(chart.m_downColor, m_lineWidth_Chart, 0, x - cWidth, volY, x + cWidth, zeroY);
+                        }
                     }
                 }
             }
