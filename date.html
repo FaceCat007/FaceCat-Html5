@@ -230,14 +230,13 @@ canvas { position:fixed;left:0px;top:0px; }
 
     //创建日历
     var m_calendar = new FCCalendar();
-    m_calendar.m_paint = m_paintDate;
+    addView(m_calendar, m_paintDate);
     m_calendar.m_borderColor = null;
     m_calendar.m_textColor = null;
     m_calendar.m_location = new FCPoint(0, 0);
     m_calendar.m_size = new FCSize(m_canvasSizeDate.cx, m_canvasSizeDate.cy);
     m_calendar.m_visible = true;
     m_calendar.m_useAnimation = true;
-    m_views_Date.push(m_calendar);
     initCalendar(m_calendar);
     m_calendar.m_selectedDay = getYear(m_calendar.m_years, 2022).m_months.get(10).m_days.get(1);
     updateCalendar(m_calendar);

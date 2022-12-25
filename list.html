@@ -93,8 +93,8 @@ canvas { position:fixed;left:0px;top:0px; }
     var m_list = new FCDiv();
 
     //初始化图层
-    var initDiv = function(){
-        m_list.m_paint = m_paintList;
+    var initDiv = function () {
+        addView(m_list, m_paintList);
         if (m_list.m_paint.m_defaultUIStyle == "dark") {
             m_list.m_backColor = "rgb(0,0,0)";
         } else if (m_list.m_paint.m_defaultUIStyle == "light") {
@@ -111,7 +111,6 @@ canvas { position:fixed;left:0px;top:0px; }
         m_list.m_useAnimation = true;
         m_list.m_itemHeight = 60;
         m_list.m_rects = new Array();
-        m_views_List.push(m_list);
     };
 
     initDiv();

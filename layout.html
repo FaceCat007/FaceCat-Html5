@@ -88,8 +88,8 @@ html, body { height: 100%; width: 100%; }
     var m_layout = new FCLayoutDiv();
 
     //初始化图层
-    var initDiv = function(){
-         m_layout.m_paint = m_paintLayout;
+    var initDiv = function () {
+        addView(m_layout, m_paintLayout);
          if (m_layout.m_paint.m_defaultUIStyle == "dark") {
             m_layout.m_backColor = "rgb(0,0,0)";
             m_layout.m_borderColor = "rgb(100,100,100)";
@@ -106,10 +106,9 @@ html, body { height: 100%; width: 100%; }
         
         m_layout.m_padding = new FCPadding(10, 10, 10, 10);
         m_layout.m_autoWrap = true;
-        m_views_Layout.push(m_layout);
         for(var i = 0; i < 100; i++){
             var button = new FCView();
-            button.m_paint = m_paintLayout;
+            addViewToParent(button, m_layout);
             button.m_text = (i + 1);
            if (m_layout.m_paint.m_defaultUIStyle == "dark") {
                 button.m_backColor = "rgb(0,0,0)";
@@ -124,8 +123,6 @@ html, body { height: 100%; width: 100%; }
             button.m_size = new FCSize(100, 100);
             button.m_location = new FCPoint(0, 0);
             button.m_margin = new FCPadding(10, 10, 10, 10);
-            button.m_parent = m_layout;
-            m_layout.m_views.push(button);
         }
         resetLayoutDiv(m_layout);
     };

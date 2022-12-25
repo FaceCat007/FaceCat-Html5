@@ -127,6 +127,7 @@ canvas { display: block; }
 
     //K线视图
     var m_chart = new FCChart(); 
+    addView(m_chart, m_paintChart);
     m_chart.m_backColor = "rgb(0,0,0)";
     m_chart.m_borderColor = "rgb(255,255,255)";
     m_chart.m_textColor = "rgb(255,255,255)";
@@ -150,8 +151,6 @@ canvas { display: block; }
     m_chart.m_indPaddingBottom = 20;
     m_chart.m_vScaleDistance = 35;
     m_chart.m_font = "12px Arial";
-    m_chart.m_paint = m_paintChart;
-    m_views_Chart.push(m_chart);
 
     var m_addingPlot_Chart = ""; //正要添加的画线
     if(m_showDemoTool_Chart){
@@ -181,7 +180,7 @@ canvas { display: block; }
             button.m_text = indicators[i];
             button.m_font = "12px Arial";
             button.m_name = "Indicator";
-            m_views_Chart.push(button);
+            addView(button, m_paintChart);
             iLeft += 80;
         }
 
@@ -225,7 +224,7 @@ canvas { display: block; }
             button.m_tag = plots[i];
             button.m_font = "12px Arial";
             button.m_name = "Plot";
-            m_views_Chart.push(button);
+            addView(button, m_paintChart);
             iLeft += 80;
         }
 
@@ -268,7 +267,7 @@ canvas { display: block; }
             button.m_tag = plots2[i];
             button.m_font = "12px Arial";
             button.m_name = "Plot";
-            m_views_Chart.push(button);
+            addView(button, m_paintChart);
             iLeft += 80;
         }
 
@@ -296,7 +295,7 @@ canvas { display: block; }
             button.m_text = functions[i];
             button.m_font = "12px Arial";
             button.m_name = "Function";
-            m_views_Chart.push(button);
+            addView(button, m_paintChart);
             iLeft += 80;
         }
     }
@@ -1001,7 +1000,7 @@ canvas { display: block; }
     * 初始化表格
     */
     var initGrid = function(){
-       m_grid.m_paint = m_paintGrid;
+        addView(m_grid, m_paintGrid);
        if (m_grid.m_paint.m_defaultUIStyle == "dark") {
             m_grid.m_backColor = "rgb(0,0,0)";
             m_grid.m_borderColor = "rgb(255,255,255)";
@@ -1015,7 +1014,6 @@ canvas { display: block; }
         m_grid.m_location = new FCPoint(0, 0);
         m_grid.m_size = new FCSize(m_canvasSizeGrid.cx, m_canvasSizeGrid.cy);
         m_grid.m_visible = true;
-        m_views_Grid.push(m_grid);
          //增加列
 	    var column1 = createGridColumn(m_grid);
 	    column1.m_text = "id";
@@ -1513,14 +1511,13 @@ canvas { display: block; }
 
     //创建日历
     var m_calendar = new FCCalendar();
-    m_calendar.m_paint = m_paintDate;
+    addView(m_calendar, m_paintDate);
     m_calendar.m_borderColor = null;
     m_calendar.m_textColor = null;
     m_calendar.m_location = new FCPoint(0, 0);
     m_calendar.m_size = new FCSize(m_canvasSizeDate.cx, m_canvasSizeDate.cy);
     m_calendar.m_visible = true;
     m_calendar.m_useAnimation = true;
-    m_views_Date.push(m_calendar);
     initCalendar(m_calendar);
     m_calendar.m_selectedDay = getYear(m_calendar.m_years, 2022).m_months.get(10).m_days.get(1);
     updateCalendar(m_calendar);
@@ -1798,6 +1795,7 @@ canvas { display: block; }
     */ 
     var initGridLog = function(){
         m_gridLog.m_paint = m_paintGridLog;
+        addView(m_gridLog, m_paintGridLog);
         if (m_gridLog.m_paint.m_defaultUIStyle == "dark") {
             m_gridLog.m_backColor = "rgb(0,0,0)";
             m_gridLog.m_borderColor = "rgb(255,255,255)";
@@ -1811,7 +1809,6 @@ canvas { display: block; }
         m_gridLog.m_size = new FCSize(m_canvasSizeGridLog.cx, m_canvasSizeGridLog.cy);
         m_gridLog.m_visible = true;
         m_gridLog.m_type ="gridlog";
-        m_views_GridLog.push(m_gridLog);
 
         //增加列
         var columnNo = createGridColumn(m_gridLog);;
@@ -2190,7 +2187,7 @@ canvas { display: block; }
     var m_maxVolume_BidSell = 0; //最大成交量
     //创建买卖档
     var m_bidSell = new FCGrid();
-    m_bidSell.m_paint = m_paintBidSell;
+    addView(m_bidSell, m_paintBidSell);
     if (m_bidSell.m_paint.m_defaultUIStyle == "dark") {
         m_bidSell.m_backColor = "rgb(0,0,0)";
         m_bidSell.m_borderColor = "rgb(100,100,100)";
@@ -2206,7 +2203,6 @@ canvas { display: block; }
     m_bidSell.m_visible = true;
     m_bidSell.m_headerHeight = 0;
     m_bidSell.m_type = "bidsell";
-    m_views_BidSell.push(m_bidSell);
     var column1 = new FCGridColumn();
     column1.m_text = "id";
     column1.m_frozen = true;
@@ -2581,8 +2577,8 @@ canvas { display: block; }
     /*
     * 初始化树
     */
-    var initTree = function(){
-       m_tree.m_paint = m_paintTree;
+    var initTree = function () {
+        addView(m_tree, m_paintTree);
        if (m_tree.m_paint.m_defaultUIStyle == "dark") {
             m_tree.m_backColor = "rgb(0,0,0)";
             m_tree.m_borderColor = "rgb(255,255,255)";
@@ -2596,7 +2592,6 @@ canvas { display: block; }
         m_tree.m_size = new FCSize(m_canvasSizeTree.cx, m_canvasSizeTree.cy);
         m_tree.m_visible = true;
         m_tree.m_showCheckBox = true;
-        m_views_Tree.push(m_tree);
 
         var column = createTreeColumn(m_tree);
         column.m_width = 500;
@@ -2902,8 +2897,8 @@ canvas { display: block; }
     var m_tabView = new FCTabView();
     
     //初始化多页夹
-    var initTab = function(){
-        m_tabView.m_paint = m_paintTab;
+   var initTab = function () {
+       addView(m_tabView, m_paintTab);
         if (m_tabView.m_paint.m_defaultUIStyle == "dark") {
             m_tabView.m_backColor = "rgb(0,0,0)";
             m_tabView.m_borderColor = "rgb(100,100,100)";
@@ -2921,7 +2916,6 @@ canvas { display: block; }
         m_tabView.m_underLineSize = 5;
         m_tabView.m_layout = "bottom";
         m_tabView.m_useAnimation = true;
-        m_views_Tab.push(m_tabView);
 
         for(var i = 0; i < 4; i++){
             var tabPage = new FCTabPage();
@@ -3161,7 +3155,7 @@ canvas { display: block; }
 
     //创建买卖档
     var m_priceList = new FCGrid();
-    m_priceList.m_paint = m_paintPrice;
+    addView(m_priceList, m_paintPrice);
     if (m_priceList.m_paint.m_defaultUIStyle == "dark") {
         m_priceList.m_backColor = "rgb(0,0,0)";
         m_priceList.m_borderColor = "rgb(100,100,100)";
@@ -3178,7 +3172,6 @@ canvas { display: block; }
 
     m_priceList.m_rowHeight = 50;
     m_priceList.m_headerHeight = 20;
-    m_views_Price.push(m_priceList);
     var column1 = new FCGridColumn();
     column1.m_text = "id";
     column1.m_frozen = true;
@@ -3572,7 +3565,7 @@ canvas { display: block; }
     
     //创建买卖档
     var m_pyrometer = new PyrometerDiv();
-     m_pyrometer.m_paint = m_paintPy;
+    addView(m_pyrometer, m_paintPy);
     if (m_pyrometer.m_paint.m_defaultUIStyle == "dark") {
         m_pyrometer.m_backColor = "rgb(0,0,0)";
         m_pyrometer.m_borderColor = "rgb(100,100,100)";
@@ -3586,7 +3579,6 @@ canvas { display: block; }
     m_pyrometer.m_size = new FCSize(m_canvasSizePy.cx, m_canvasSizePy.cy);
 
     m_pyrometer.m_visible = true;
-    m_views_Py.push(m_pyrometer);
     
     var layoutrow = function(pyrometer, R, w){
         var width = pyrometer.m_size.cx;
@@ -4072,8 +4064,7 @@ canvas { display: block; }
 			    pData.m_backColor = null;
 			    pData.m_borderColor = "rgb(0,0,0)";
 			    pData.m_visible = true;
-			    pData.m_parent = m_pyrometer;
-			    m_pyrometer.m_views.push(pData);
+                addViewToParent(pData, m_pyrometer);
 	        }   
 	        m_pyrometer.m_views.sort((m, n) => {
 			    if (m.m_value > n.m_value) {
@@ -4157,8 +4148,8 @@ canvas { display: block; }
     var m_list = new FCDiv();
 
     //初始化图层
-    var initDiv = function(){
-        m_list.m_paint = m_paintList;
+    var initDiv = function () {
+        addView(m_list, m_paintList);
         if (m_list.m_paint.m_defaultUIStyle == "dark") {
             m_list.m_backColor = "rgb(0,0,0)";
         } else if (m_list.m_paint.m_defaultUIStyle == "light") {
@@ -4174,7 +4165,6 @@ canvas { display: block; }
         m_list.m_useAnimation = true;
         m_list.m_itemHeight = 60;
         m_list.m_rects = new Array();
-        m_views_List.push(m_list);
     };
 
     initDiv();
@@ -4641,8 +4631,7 @@ canvas { display: block; }
                     pData.m_borderColor = "rgb(0,0,0)";
 	            }
 			    pData.m_visible = true;
-			    pData.m_parent = m_list;
-			    m_list.m_views.push(pData);
+                addViewToParent(pData, m_list);
 	        }  
 	        var totalValue = 0; 
 	        viewsSize = m_list.m_views.length;
@@ -4720,7 +4709,7 @@ canvas { display: block; }
 
     //K线视图
     var m_histogram = new FCChart(); 
-    m_histogram.m_paint = m_paintHistogram;
+    addView(m_histogram, m_paintHistogram);
     if (m_histogram.m_paint.m_defaultUIStyle == "dark") {
         m_histogram.m_backColor = "rgb(0,0,0)";
         m_histogram.m_borderColor = "rgb(100,100,100)";
@@ -4751,7 +4740,6 @@ canvas { display: block; }
     m_histogram.m_font = "14px Arial";
     m_histogram.m_data = new Array();
     m_histogram.m_cycle = "tick";
-    m_views_Histogram2.push(m_histogram);
     
    /*
     * 黑色风格
@@ -5193,7 +5181,7 @@ canvas { display: block; }
 
     //K线视图
     var m_chart2 = new FCChart(); 
-    m_chart2.m_paint = m_paintChart2;
+    addView(m_chart2, m_paintChart2);
     if (m_chart2.m_paint.m_defaultUIStyle == "dark") {
         m_chart2.m_backColor = "rgb(0,0,0)";
         m_chart2.m_borderColor = "rgb(100,100,100)";
@@ -5225,7 +5213,6 @@ canvas { display: block; }
     m_chart2.m_font = "12px Arial";
     m_chart2.m_data = new Array();
     m_chart2.m_cycle = "tick";
-    m_views_Chart2.push(m_chart2);
     
 
     /*

@@ -82,8 +82,8 @@ canvas { position:fixed;left:0px;top:0px; }
     var m_inputDiv = new FCView();
     
     //初始化多页夹
-    var initInput = function(){
-        m_inputDiv.m_paint = m_paintInput;
+   var initInput = function () {
+       addView(m_inputDiv, m_paintInput);
         if (m_inputDiv.m_paint.m_defaultUIStyle == "dark") {
             m_inputDiv.m_backColor = "rgb(0,0,0)";
             m_inputDiv.m_borderColor = "rgb(100,100,100)";
@@ -96,14 +96,13 @@ canvas { position:fixed;left:0px;top:0px; }
         m_inputDiv.m_location = new FCPoint(0, 0);
         m_inputDiv.m_size = new FCSize(m_canvasSizeInput.cx, m_canvasSizeInput.cy);
         m_inputDiv.m_visible = true;
-        m_views_Input.push(m_inputDiv);
         m_inputDiv.m_views = new Array();
 
         var textBox = new FCTextBox;
         textBox.m_location = new FCPoint(50, 50);
         textBox.m_size = new FCSize(100, 20);
         textBox.m_font = "12px Arial";
-        textBox.m_parent = m_inputDiv;
+        addViewToParent(textBox, m_inputDiv);
         if (m_inputDiv.m_paint.m_defaultUIStyle == "dark") {
             textBox.m_backColor = "rgb(0,0,0)";
             textBox.m_borderColor = "rgb(255,255,255)";
@@ -113,16 +112,14 @@ canvas { position:fixed;left:0px;top:0px; }
             textBox.m_borderColor = "rgb(0,0,0)";
             textBox.m_textColor = "rgb(0,0,0)";
 	    }
-	    textBox.m_paint = m_paintInput;
-        m_inputDiv.m_views.push(textBox);
         createInputTextBox(textBox);
         
         
-         var comboBox = new FCTextBox;
+       var comboBox = new FCTextBox;
+       addViewToParent(comboBox, m_inputDiv);
         comboBox.m_location = new FCPoint(50, 150);
         comboBox.m_size = new FCSize(100, 20);
         comboBox.m_font = "12px Arial";
-        comboBox.m_parent = m_inputDiv;
         if (m_inputDiv.m_paint.m_defaultUIStyle == "dark") {
             comboBox.m_backColor = "rgb(0,0,0)";
             comboBox.m_borderColor = "rgb(255,255,255)";
@@ -132,8 +129,6 @@ canvas { position:fixed;left:0px;top:0px; }
             comboBox.m_borderColor = "rgb(0,0,0)";
             comboBox.m_textColor = "rgb(0,0,0)";
 	    }
-	    comboBox.m_paint = m_paintInput;
-        m_inputDiv.m_views.push(comboBox);
         createInputComboBox(comboBox);
 
         var options = new Array();
@@ -150,13 +145,11 @@ canvas { position:fixed;left:0px;top:0px; }
             comboBox.m_input.add(option, null);
         }
 
-	    var image = new FCImage
+        var image = new FCImage
+        addViewToParent(image, m_inputDiv);
         image.m_location = new FCPoint(50, 250);
         image.m_size = new FCSize(100, 100);
-        image.m_parent = m_inputDiv;
 	    image.m_src = "http://www.jjmfc.com/index_files/go.png";
-        image.m_paint = m_paintInput;
-        m_inputDiv.m_views.push(image);
         createInputImage(image);
     }
     initInput();

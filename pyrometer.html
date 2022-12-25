@@ -107,7 +107,7 @@ canvas { position:fixed;left:0px;top:0px; }
     
     //创建买卖档
     var m_pyrometer = new PyrometerDiv();
-     m_pyrometer.m_paint = m_paintPy;
+    addView(m_pyrometer, m_paintPy);
     if (m_pyrometer.m_paint.m_defaultUIStyle == "dark") {
         m_pyrometer.m_backColor = "rgb(0,0,0)";
         m_pyrometer.m_borderColor = "rgb(100,100,100)";
@@ -121,7 +121,6 @@ canvas { position:fixed;left:0px;top:0px; }
     m_pyrometer.m_size = new FCSize(m_canvasSizePy.cx, m_canvasSizePy.cy);
 
     m_pyrometer.m_visible = true;
-    m_views_Py.push(m_pyrometer);
     
     var layoutrow = function(pyrometer, R, w){
         var width = pyrometer.m_size.cx;
@@ -657,8 +656,8 @@ canvas { position:fixed;left:0px;top:0px; }
 			    pData.m_borderColor = "rgb(0,0,0)";
 			    pData.m_visible = true;
 			    pData.m_parent = m_pyrometer;
-			    pData.m_paint = m_paintPy;
-			    m_pyrometer.m_views.push(pData);
+                pData.m_paint = m_paintPy;
+                addViewToParent(pData, m_pyrometer);
 	        }   
 	        m_pyrometer.m_views.sort((m, n) => {
 			    if (m.m_value > n.m_value) {

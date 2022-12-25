@@ -122,8 +122,8 @@ canvas { position:fixed;left:0px;top:0px; }
     /*
     * 初始化表格
     */
-    var initGrid = function(){
-       m_grid.m_paint = m_paintGrid;
+    var initGrid = function () {
+       addView(m_grid, m_paintGrid);
        if (m_grid.m_paint.m_defaultUIStyle == "dark") {
             m_grid.m_backColor = "rgb(0,0,0)";
             m_grid.m_borderColor = "rgb(100,100,100)";
@@ -137,7 +137,6 @@ canvas { position:fixed;left:0px;top:0px; }
         m_grid.m_location = new FCPoint(0, 0);
         m_grid.m_size = new FCSize(m_canvasSizeGrid.cx, m_canvasSizeGrid.cy);
         m_grid.m_visible = true;
-        m_views_Grid.push(m_grid);
          //增加列
 	    var column1 = createGridColumn(m_grid);
 	    column1.m_text = "id";

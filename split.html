@@ -90,8 +90,8 @@ html, body { height: 100%; width: 100%; }
     var m_splitter = new FCView();
 
     //初始化图层
-    var initDiv = function(){
-        m_split.m_paint = m_paintSplit;
+    var initDiv = function () {
+        addView(m_split, m_paintSplit);
         if (m_split.m_paint.m_defaultUIStyle == "dark") {
             m_split.m_backColor = "rgb(0,0,0)";
             m_split.m_borderColor = "rgb(100,100,100)";
@@ -104,16 +104,13 @@ html, body { height: 100%; width: 100%; }
         m_split.m_location = new FCPoint(0, 0);
         m_split.m_size = new FCSize(m_canvasSizeSplit.cx, m_canvasSizeSplit.cy);
         m_split.m_visible = true;
-        
-        m_views_Split.push(m_split);
-        
+            
          if (m_split.m_paint.m_defaultUIStyle == "dark") {
             m_splitter.m_backColor = "rgb(150,150,150)";
         } else if (m_split.m_paint.m_defaultUIStyle == "light") {
             m_splitter.m_backColor = "rgb(100,100,100)";
 	    }
-        
-        m_split.m_views.push(m_splitter);
+        addViewToParent(m_splitter, m_split);
         m_split.m_splitter = m_splitter;
         m_splitter.m_location = new FCPoint(200, 0);
         m_splitter.m_size = new FCSize(5, m_canvasSizeSplit.cy);
@@ -123,16 +120,14 @@ html, body { height: 100%; width: 100%; }
         firstView.m_backColor = "rgb(255,0,0)";
         firstView.m_location = new FCPoint(0, 0);
         firstView.m_size = new FCSize(0, 0);
-        firstView.m_paint = m_paintSplit;
-        m_split.m_views.push(firstView);
+        addViewToParent(firstView, m_split);
         m_split.m_firstView = firstView;
         
         var secondView = new FCView();
         secondView.m_backColor = "rgb(0,255,0)";
         secondView.m_location = new FCPoint(0, 0);
         secondView.m_size = new FCSize(0, 0);
-        secondView.m_paint = m_paintSplit;
-        m_split.m_views.push(secondView);
+        addViewToParent(secondView, m_split);
         m_split.m_secondView = secondView;
         m_split.m_oldSize = new FCSize(m_canvasSizeSplit.cx, m_canvasSizeSplit.cy);
         resetSplitLayoutDiv(m_split);
@@ -378,6 +373,14 @@ html, body { height: 100%; width: 100%; }
             m_splitter.m_size = new FCSize(m_canvasSizeSplit.cx, 5);
         }
         resetSplitLayoutDiv(m_split);
+        console.log(m_split.m_firstView.m_location.x);
+        console.log(m_split.m_firstView.m_location.y);
+        console.log(m_split.m_firstView.m_size.cx);
+        console.log(m_split.m_firstView.m_size.cy);
+        console.log(m_split.m_secondView.m_location.x);
+        console.log(m_split.m_secondView.m_location.y);
+        console.log(m_split.m_secondView.m_size.cx);
+        console.log(m_split.m_secondView.m_size.cy);
 	    invalidate(m_paintSplit);
     };
     

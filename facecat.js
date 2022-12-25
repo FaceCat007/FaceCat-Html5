@@ -436,6 +436,60 @@ function FCView() {
 };
 
 /*
+ * 添加顶层视图
+ * view 视图
+ * paint 绘图对象
+ */
+var addView = function (view, paint) {
+	view.m_paint = paint;
+	paint.m_canvas.m_views.push(view);
+};
+
+/*
+ * 添加到父视图
+ * view 视图
+ * parent 父视图
+ */
+var addViewToParent = function (view, parent) {
+	view.m_paint = parent.m_paint;
+	if (!parent.m_views) {
+		parent.m_views = new Array();
+    }
+	parent.m_views.push(view);
+	view.m_parent = parent;
+};
+
+/*
+ * 移除顶层视图
+ */
+var removeView = function (view, paint) {
+	if (paint.m_canvas.m_views) {
+		for (var i = 0; i < paint.m_canvas.m_views.length; i++) {
+			if (paint.m_canvas.m_views[i] == view) {
+				paint.m_canvas.m_views.splice(i, 1);
+				break;
+			}
+		}
+	}
+};
+
+/*
+ * 从父视图中移除
+ * view 视图
+ * parent 父视图
+ */
+var removeViewFromParent = function (view, parent) {
+	if (parent.m_views) {
+		for (var i = 0; i < parent.m_views.length; i++) {
+			if (parent.m_views[i] == view) {
+				parent.m_views.splice(i, 1);
+				break;
+			}
+		}
+	}
+};
+
+/*
 * 获取绝对位置X
 * view:视图
 */

@@ -79,7 +79,7 @@ canvas { position:fixed;left:0px;top:0px; }
     });
     //创建买卖档
     var m_priceList = new FCGrid();
-    m_priceList.m_paint = m_paintPrice;
+    addView(m_priceList, m_paintPrice);
     if (m_priceList.m_paint.m_defaultUIStyle == "dark") {
         m_priceList.m_backColor = "rgb(0,0,0)";
         m_priceList.m_borderColor = "rgb(100,100,100)";
@@ -96,7 +96,6 @@ canvas { position:fixed;left:0px;top:0px; }
 
     m_priceList.m_rowHeight = 50;
     m_priceList.m_headerHeight = 20;
-    m_views_Price.push(m_priceList);
     var column1 = new FCGridColumn();
     column1.m_text = "id";
     column1.m_frozen = true;

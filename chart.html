@@ -85,6 +85,7 @@ canvas { position:fixed;left:0px;top:0px; }
 
     //K线视图
     var m_chart = new FCChart(); 
+    addView(m_chart, m_paintChart);
     m_chart.m_backColor = "rgb(0,0,0)";
     m_chart.m_borderColor = "rgb(255,255,255)";
     m_chart.m_textColor = "rgb(255,255,255)";
@@ -108,8 +109,6 @@ canvas { position:fixed;left:0px;top:0px; }
     m_chart.m_indPaddingBottom = 20;
     m_chart.m_vScaleDistance = 35;
     m_chart.m_font = "12px Arial";
-    m_chart.m_paint = m_paintChart;
-    m_views_Chart.push(m_chart);
 
     var m_addingPlot_Chart = ""; //正要添加的画线
     if(m_showDemoTool_Chart){
@@ -139,7 +138,7 @@ canvas { position:fixed;left:0px;top:0px; }
             button.m_text = indicators[i];
             button.m_font = "12px Arial";
             button.m_name = "Indicator";
-            m_views_Chart.push(button);
+            addView(button, m_paintChart);
             iLeft += 80;
         }
 
@@ -183,7 +182,7 @@ canvas { position:fixed;left:0px;top:0px; }
             button.m_tag = plots[i];
             button.m_font = "12px Arial";
             button.m_name = "Plot";
-            m_views_Chart.push(button);
+            addView(button, m_paintChart);
             iLeft += 80;
         }
 
@@ -226,7 +225,7 @@ canvas { position:fixed;left:0px;top:0px; }
             button.m_tag = plots2[i];
             button.m_font = "12px Arial";
             button.m_name = "Plot";
-            m_views_Chart.push(button);
+            addView(button, m_paintChart);
             iLeft += 80;
         }
 
@@ -254,7 +253,7 @@ canvas { position:fixed;left:0px;top:0px; }
             button.m_text = functions[i];
             button.m_font = "12px Arial";
             button.m_name = "Function";
-            m_views_Chart.push(button);
+            addView(button, m_paintChart);
             iLeft += 80;
         }
     }

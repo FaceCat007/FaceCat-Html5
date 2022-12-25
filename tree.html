@@ -121,7 +121,12 @@ canvas { position:fixed;left:0px;top:0px; }
     /*
     * 初始化树
     */
-    var initTree = function(){
+    var initTree = function () {
+        addView(m_tree, m_paintTree);
+        var div = new FCDiv();
+        div.m_size = new FCSize(200, 200);
+        div.m_backColor = "rgb(255,0,0)";
+        div.m_location = new FCPoint(200, 200);
        m_tree.m_paint = m_paintTree;
        if (m_tree.m_paint.m_defaultUIStyle == "dark") {
             m_tree.m_backColor = "rgb(0,0,0)";
@@ -136,7 +141,6 @@ canvas { position:fixed;left:0px;top:0px; }
         m_tree.m_size = new FCSize(m_canvasSizeTree.cx, m_canvasSizeTree.cy);
         m_tree.m_visible = true;
         m_tree.m_showCheckBox = true;
-        m_views_Tree.push(m_tree);
 
         var column = createTreeColumn(m_tree);
         column.m_width = 500;
@@ -374,10 +378,10 @@ canvas { position:fixed;left:0px;top:0px; }
     * clipRect:裁剪区域
     */
     m_paintTree.onPaint = function (view, paint, clipRect) {
-	    if (view.m_type == "tree") {
-	        drawDiv(view, paint, clipRect);
-		    drawTree(view, paint, clipRect);
-	    }
+        if (view.m_type == "tree") {
+            drawDiv(view, paint, clipRect);
+            drawTree(view, paint, clipRect);
+        } 
     };
 
     /*

@@ -81,8 +81,8 @@ canvas { position:fixed;left:0px;top:0px; }
     var m_div = new FCDiv();
 
     //初始化图层
-    var initDiv = function(){
-        m_div.m_paint = m_paintDiv;
+    var initDiv = function () {
+        addView(m_div, m_paintDiv);
         if (m_div.m_paint.m_defaultUIStyle == "dark") {
             m_div.m_backColor = "rgb(0,0,0)";
             m_div.m_borderColor = "rgb(100,100,100)";
@@ -100,18 +100,15 @@ canvas { position:fixed;left:0px;top:0px; }
         m_div.m_text = "图层";
         m_div.m_visible = true;
 
-        m_views_Div.push(m_div);
-
         for(var i = 0; i < 10; i++){
             var subDiv = new FCDiv;
+            addViewToParent(subDiv, m_div);
 	        subDiv.m_location = new FCPoint(i * 200, i * 200);
 	        subDiv.m_size = new FCSize(200, 200);
             subDiv.m_text = "按钮" + i;
             subDiv.m_visible = true;
             subDiv.m_showHScrollBar = true; //是否显示横向滚动条
 	        subDiv.m_showVScrollBar = true; //是否显示横向滚动条
-            subDiv.m_parent = m_div;
-            subDiv.m_paint = m_paintDiv;
             if (m_div.m_paint.m_defaultUIStyle == "dark") {
                 subDiv.m_backColor = "rgb(0,0,0)";
                 subDiv.m_borderColor = "rgb(100,100,100)";
@@ -122,15 +119,13 @@ canvas { position:fixed;left:0px;top:0px; }
                 subDiv.m_textColor = "rgb(0,0,0)";
 	        }
             subDiv.m_paint = m_paintDiv;
-	        m_div.m_views.push(subDiv);
 	        for (var j = 0; j < 10; j++) {
-		        var sunDiv = new FCView;
+                var sunDiv = new FCView;
+                addViewToParent(sunDiv, subDiv);
 		        sunDiv.m_location = new FCPoint(j * 20, j * 40 );
 		        sunDiv.m_size = new FCSize(100, 20);
 		        sunDiv.m_text = "按钮" + i + "," + j;
 		        sunDiv.m_visible = true;
-		        sunDiv.m_parent = subDiv;
-                sunDiv.m_paint = m_paintDiv;
                 sunDiv.m_allowDrag = true;
 		        sunDiv.m_backImage = "http://www.jjmfc.com/index_files/go.png";
 		        sunDiv.m_font = "12px Arial";
@@ -143,7 +138,6 @@ canvas { position:fixed;left:0px;top:0px; }
                     sunDiv.m_borderColor = "rgb(150,150,150)";
                     sunDiv.m_textColor = "rgb(0,0,0)";
 	            }
-		        subDiv.m_views.push(sunDiv);
             }
         }
     };

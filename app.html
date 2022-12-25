@@ -647,7 +647,7 @@ canvas { position:fixed;left:0px;top:0px; }
         m_tabView.m_underLineColor = "rgb(255,215,0)";
         m_tabView.m_underLineSize = 5;
         m_tabView.m_useAnimation = true;
-        m_views_App.push(m_tabView);
+        addView(m_tabView, m_paintApp);
 
         for(var i = 0; i < titles.length; i++){
             var tabPage = new FCTabPage();
@@ -686,7 +686,8 @@ canvas { position:fixed;left:0px;top:0px; }
     
     //创建买卖档
     var m_priceList = new FCGrid();
-        m_priceList.m_paint = m_paintApp;
+    addViewToParent(m_priceList, m_tabView.m_tabPages[0]);
+    m_priceList.m_paint = m_paintApp;
     if (m_priceList.m_paint.m_defaultUIStyle == "dark") {
         m_priceList.m_backColor = "rgb(0,0,0)";
         m_priceList.m_borderColor = null;
@@ -702,9 +703,6 @@ canvas { position:fixed;left:0px;top:0px; }
     m_priceList.m_type = "price";
     m_priceList.m_rowHeight = 50;
     m_priceList.m_headerHeight = 20;
-    m_tabView.m_tabPages[0].m_views = new Array();
-    m_tabView.m_tabPages[0].m_views.push(m_priceList);
-    m_priceList.m_parent = m_tabView.m_tabPages[0];
     var column1 = new FCGridColumn();
     column1.m_text = "id";
     column1.m_frozen = true;
@@ -830,7 +828,7 @@ canvas { position:fixed;left:0px;top:0px; }
 
     //初始化表格
     var initGridLog = function(){
-        m_gridLog.m_paint = m_paintApp;
+        addViewToParent(m_gridLog, m_tabView.m_tabPages[4]);
          if (m_gridLog.m_paint.m_defaultUIStyle == "dark") {
             m_gridLog.m_backColor = "rgb(0,0,0)";
             m_gridLog.m_borderColor = null;
@@ -844,9 +842,6 @@ canvas { position:fixed;left:0px;top:0px; }
         m_gridLog.m_size = new FCSize(m_tabView.m_tabPages[4].m_size.cx, m_tabView.m_tabPages[4].m_size.cy);
         m_gridLog.m_visible = true;
         m_gridLog.m_type = "gridlog";
-        m_tabView.m_tabPages[4].m_views = new Array();
-        m_tabView.m_tabPages[4].m_views.push(m_gridLog);
-        m_gridLog.m_parent = m_tabView.m_tabPages[4];
 
         //增加列
         var columnNo = createGridColumn(m_gridLog);;
@@ -1037,8 +1032,8 @@ canvas { position:fixed;left:0px;top:0px; }
     /*
     * 初始化树
     */
-    var initTree = function(){
-        m_tree.m_paint = m_paintApp;
+    var initTree = function () {
+        addViewToParent(m_tree, m_tabView.m_tabPages[5]);
         if (m_tree.m_paint.m_defaultUIStyle == "dark") {
             m_tree.m_backColor = "rgb(0,0,0)";
             m_tree.m_borderColor = null;
@@ -1052,11 +1047,6 @@ canvas { position:fixed;left:0px;top:0px; }
         m_tree.m_size = new FCSize(m_tabView.m_tabPages[5].m_size.cx, m_tabView.m_tabPages[5].m_size.cy);
         m_tree.m_visible = true;
         m_tree.m_showCheckBox = true;
-
-        m_tabView.m_tabPages[5].m_views = new Array();
-        m_tabView.m_tabPages[5].m_views.push(m_tree);
-        m_tree.m_parent = m_tabView.m_tabPages[5];
-        
 
         var column = createTreeColumn(m_tree);
         column.m_width = 500;
@@ -1143,16 +1133,13 @@ canvas { position:fixed;left:0px;top:0px; }
     initTree();
     
     var m_calendar = new FCCalendar();
+    addViewToParent(m_calendar, m_tabView.m_tabPages[3]);
     m_calendar.m_borderColor = null;
     m_calendar.m_textColor = null;
     m_calendar.m_location = new FCPoint(0, 0);
     m_calendar.m_size = new FCSize(m_tabView.m_tabPages[3].m_size.cx, m_tabView.m_tabPages[3].m_size.cy);
     m_calendar.m_visible = true;
     m_calendar.m_useAnimation = true;
-    m_calendar.m_paint = m_paintApp;
-    m_tabView.m_tabPages[3].m_views = new Array();
-    m_tabView.m_tabPages[3].m_views.push(m_calendar);
-    m_calendar.m_parent = m_tabView.m_tabPages[3];
     initCalendar(m_calendar);
     m_calendar.m_selectedDay = getYear(m_calendar.m_years, 2022).m_months.get(10).m_days.get(1);
     updateCalendar(m_calendar);
@@ -1407,6 +1394,7 @@ canvas { position:fixed;left:0px;top:0px; }
 
     //创建买卖档
     var m_bidSell = new FCGrid();
+    addViewToParent(m_bidSell, m_tabView.m_tabPages[2]);
     m_bidSell.m_paint = m_paintApp;
     if (m_bidSell.m_paint.m_defaultUIStyle == "dark") {
         m_bidSell.m_backColor = "rgb(0,0,0)";
@@ -1422,10 +1410,6 @@ canvas { position:fixed;left:0px;top:0px; }
     m_bidSell.m_size = new FCSize(m_tabView.m_tabPages[2].m_size.cx, m_tabView.m_tabPages[2].m_size.cy);
     m_bidSell.m_visible = true;
     m_bidSell.m_headerHeight = 0;
-
-    m_tabView.m_tabPages[2].m_views = new Array();
-    m_tabView.m_tabPages[2].m_views.push(m_bidSell);
-    m_bidSell.m_parent = m_tabView.m_tabPages[2];
     m_bidSell.m_type = "bidsell";
     var column1 = new FCGridColumn();
     column1.m_text = "id";
@@ -1564,6 +1548,7 @@ canvas { position:fixed;left:0px;top:0px; }
 
     //K线视图
     var m_chart = new FCChart(); 
+    addViewToParent(m_chart, m_tabView.m_tabPages[1]);
     m_chart.m_paint = m_paintApp;
     m_chart.m_location = new FCPoint(0, 0);
     if(m_showDemoTool_Chart){
@@ -1588,9 +1573,6 @@ canvas { position:fixed;left:0px;top:0px; }
     m_chart.m_indPaddingBottom = 20;
     m_chart.m_vScaleDistance = 35;
     m_chart.m_font = "12px Arial";
-    m_tabView.m_tabPages[1].m_views = new Array();
-    m_tabView.m_tabPages[1].m_views.push(m_chart);
-    m_chart.m_parent = m_tabView.m_tabPages[1];
 
     var m_addingPlot_Chart = ""; //正要添加的画线
     if(m_showDemoTool_Chart){

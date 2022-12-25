@@ -58,12 +58,12 @@ canvas { position:fixed;left:0px;top:0px; }
     MyView.prototype = FCView;
 
     var myview = new MyView(); //我的视图
+    addView(myview, m_paint);
     myview.m_location = new FCPoint(100, 100);
     myview.m_size = new FCSize(200, 200);
     myview.m_visible = true;
     myview.m_backColor = "rgb(255,0,0)";
     myview.m_borderColor = "rgb(0,0,0)";
-    m_views.push(myview);
 
     /*
     * 鼠标点击实现方法

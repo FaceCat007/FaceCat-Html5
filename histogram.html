@@ -80,7 +80,7 @@ canvas { position:fixed;left:0px;top:0px; }
 
     //K线视图
     var m_histogram = new FCChart(); 
-    m_histogram.m_paint = m_paintHistogram;
+    addView(m_histogram, m_paintHistogram);
     if (m_histogram.m_paint.m_defaultUIStyle == "dark") {
         m_histogram.m_backColor = "rgb(0,0,0)";
         m_histogram.m_borderColor = "rgb(100,100,100)";
@@ -111,7 +111,6 @@ canvas { position:fixed;left:0px;top:0px; }
     m_histogram.m_font = "14px Arial";
     m_histogram.m_data = new Array();
     m_histogram.m_cycle = "tick";
-    m_views_Histogram2.push(m_histogram);
     
    /*
     * 黑色风格

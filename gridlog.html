@@ -120,8 +120,8 @@ canvas { position:fixed;left:0px;top:0px; }
     /*
     * 初始化表格
     */ 
-    var initGridLog = function(){
-        m_gridLog.m_paint = m_paintGridLog;
+     var initGridLog = function () {
+        addView(m_gridLog, m_paintGridLog);
         if (m_gridLog.m_paint.m_defaultUIStyle == "dark") {
             m_gridLog.m_backColor = "rgb(0,0,0)";
             m_gridLog.m_borderColor = "rgb(100,100,100)";
@@ -135,7 +135,6 @@ canvas { position:fixed;left:0px;top:0px; }
         m_gridLog.m_size = new FCSize(m_canvasSizeGridLog.cx, m_canvasSizeGridLog.cy);
         m_gridLog.m_visible = true;
         m_gridLog.m_type ="gridlog";
-        m_views_GridLog.push(m_gridLog);
 
         //增加列
         var columnNo = createGridColumn(m_gridLog);;

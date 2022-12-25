@@ -98,7 +98,7 @@ canvas { position:fixed;left:0px;top:0px; }
     var m_maxVolume_BidSell = 0; //最大成交量
     //创建买卖档
     var m_bidSell = new FCGrid();
-    m_bidSell.m_paint = m_paintBidSell;
+    addView(m_bidSell, m_paintBidSell);
     if (m_bidSell.m_paint.m_defaultUIStyle == "dark") {
         m_bidSell.m_backColor = "rgb(0,0,0)";
         m_bidSell.m_borderColor = "rgb(100,100,100)";
@@ -114,7 +114,6 @@ canvas { position:fixed;left:0px;top:0px; }
     m_bidSell.m_visible = true;
     m_bidSell.m_headerHeight = 0;
     m_bidSell.m_type = "bidsell";
-    m_views_BidSell.push(m_bidSell);
     var column1 = new FCGridColumn();
     column1.m_text = "id";
     column1.m_frozen = true;

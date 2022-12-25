@@ -81,7 +81,7 @@ canvas { position:fixed;left:0px;top:0px; }
 
     //K线视图
     var m_chart2 = new FCChart(); 
-    m_chart2.m_paint = m_paintChart2;
+    addView(m_chart2, m_paintChart2);
     if (m_chart2.m_paint.m_defaultUIStyle == "dark") {
         m_chart2.m_backColor = "rgb(0,0,0)";
         m_chart2.m_borderColor = "rgb(100,100,100)";
@@ -113,7 +113,6 @@ canvas { position:fixed;left:0px;top:0px; }
     m_chart2.m_font = "12px Arial";
     m_chart2.m_data = new Array();
     m_chart2.m_cycle = "tick";
-    m_views_Chart2.push(m_chart2);
     
 
     /*

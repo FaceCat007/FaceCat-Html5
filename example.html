@@ -80,7 +80,7 @@ canvas { position:fixed;left:0px;top:0px; }
 
     //创建买卖档
     var m_exampleList = new FCGrid();
-    m_exampleList.m_paint = m_paintExample;
+    addView(m_exampleList, m_paintExample);
     if (m_exampleList.m_paint.m_defaultUIStyle == "dark") {
         m_exampleList.m_backColor = "rgb(0,0,0)";
         m_exampleList.m_borderColor = "rgb(100,100,100)";
@@ -97,7 +97,6 @@ canvas { position:fixed;left:0px;top:0px; }
 
     m_exampleList.m_rowHeight = 50;
     m_exampleList.m_headerHeight = 20;
-    m_views_Example.push(m_exampleList);
     var column1 = new FCGridColumn();
     column1.m_text = "id";
     column1.m_width = m_exampleList.m_size.cx;
