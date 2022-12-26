@@ -306,7 +306,7 @@ var drawGridScrollBar = function(grid, paint, clipRect){
     }
     if (grid.m_showHScrollBar) {
 		var contentWidth = getGridContentWidth(grid);
-		if (contentWidth > grid.m_size.cx) {
+		if (contentWidth > grid.m_size.cx - grid.m_scrollSize) {
 			var sLeft = grid.m_scrollH / contentWidth * grid.m_size.cx;
 			var sRight = (grid.m_scrollH + grid.m_size.cx) / contentWidth * grid.m_size.cx;
 			if (sRight - sLeft < grid.m_scrollSize) {
@@ -317,7 +317,7 @@ var drawGridScrollBar = function(grid, paint, clipRect){
 	}
 	if(grid.m_showVScrollBar){
 	    var contentHeight = getGridContentHeight(grid);
-		if (contentHeight > grid.m_size.cy) {
+		if (contentHeight > grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize) {
 			var sTop = grid.m_headerHeight + grid.m_scrollV / contentHeight * (grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize);
 			var sBottom = sTop + ((grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize)) / contentHeight * (grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize);
 			if (sBottom - sTop < grid.m_scrollSize) {
@@ -397,7 +397,7 @@ var mouseMoveGrid = function (grid, firstTouch, secondTouch, firstPoint, secondP
 		}
 		if (grid.m_allowDragScroll) {
 			var contentWidth = getGridContentWidth(grid);
-			if (contentWidth > grid.m_size.cx) {
+			if (contentWidth > grid.m_size.cx - grid.m_scrollSize) {
 				var subX = grid.m_startPoint.x - mp.x;
 				var newScrollH = grid.m_startScrollH + subX;
 				if (newScrollH < 0) {
@@ -411,7 +411,7 @@ var mouseMoveGrid = function (grid, firstTouch, secondTouch, firstPoint, secondP
 				}
 			}
 			var contentHeight = getGridContentHeight(grid);
-			if (contentHeight > grid.m_size.cy) {
+			if (contentHeight > grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize) {
 				var subY = grid.m_startPoint.y - mp.y;
 				var newScrollV = grid.m_startScrollV + subY;
 				if (newScrollV < 0) {
@@ -444,7 +444,7 @@ var mouseDownGrid = function (grid, firstTouch, secondTouch, firstPoint, secondP
 	grid.m_downScrollVButton = false;
 	if (grid.m_showHScrollBar){
 		var contentWidth = getGridContentWidth(grid);
-		if (contentWidth > grid.m_size.cx) {
+		if (contentWidth > grid.m_size.cx - grid.m_scrollSize) {
 		    var sLeft = grid.m_scrollH / contentWidth * grid.m_size.cx;
 		    var sRight = (grid.m_scrollH + grid.m_size.cx) / contentWidth * grid.m_size.cx;
 		    if (sRight - sLeft < grid.m_scrollSize) {
@@ -459,7 +459,7 @@ var mouseDownGrid = function (grid, firstTouch, secondTouch, firstPoint, secondP
 	}
 	if(grid.m_showVScrollBar){
 	    var contentHeight = getGridContentHeight(grid);
-		if (contentHeight > grid.m_size.cy) {
+		if (contentHeight > grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize) {
 			var sTop = grid.m_headerHeight + grid.m_scrollV / contentHeight * (grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize);
 			var sBottom = (grid.m_scrollV + (grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize)) / contentHeight * (grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize);
 			if (sBottom - sTop < grid.m_scrollSize) {
@@ -501,7 +501,7 @@ var checkGridDragScroll = function () {
 			var oldScrollH = parseInt(m_dragScrollView_Grid.m_scrollH + m_scrollAddSpeed_Grid);
 			if(m_scrollDirection_Grid == 0){
 			    var contentHeight = getGridContentHeight(m_dragScrollView_Grid);
-			    if (contentHeight < m_dragScrollView_Grid.m_size.cy) {
+				if (contentHeight < m_dragScrollView_Grid.m_size.cy - m_dragScrollView_Grid.m_scrollSize) {
 				    m_dragScrollView_Grid.m_scrollV = 0;
 			    } else {
 				    if (oldScrollV < 0) {
@@ -513,7 +513,7 @@ var checkGridDragScroll = function () {
 			    }
 			}else{
 			    var contentWidth = getGridContentWidth(m_dragScrollView_Grid);
-			    if (contentWidth < m_dragScrollView_Grid.m_size.cx) {
+				if (contentWidth < m_dragScrollView_Grid.m_size.cx - m_dragScrollView_Grid.m_headerHeight - m_dragScrollView_Grid.m_scrollSize) {
 				    m_dragScrollView_Grid.m_scrollH = 0;
 			    } else {
 				    if (oldScrollH < 0) {
@@ -833,7 +833,7 @@ var mouseWheelGrid = function(grid, delta){
 	    oldScrollV += grid.m_rowHeight;
     }
     var contentHeight = getGridContentHeight(grid);
-    if (contentHeight < grid.m_size.cy) {
+	if (contentHeight < grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize) {
         grid.m_scrollV = 0;
     } else {
         if (oldScrollV < 0) {
