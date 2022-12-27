@@ -1245,7 +1245,7 @@ var addTouchEndEvent = function(canvas, callBack, clickCallBack){
 /*
 * 加载FaceCat
 */
-var loadFaceCat = function(paint, xml, size){
+var renderFaceCat = function(paint, xml, size){
     var xmlDoc = new DOMParser().parseFromString(xml, "text/xml");
     var rootNode = xmlDoc.getElementsByTagName('body')[0];
     readXmlNode(paint, rootNode, null);
