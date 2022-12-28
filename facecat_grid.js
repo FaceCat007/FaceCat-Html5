@@ -306,7 +306,7 @@ var drawGridScrollBar = function(grid, paint, clipRect){
     }
     if (grid.m_showHScrollBar) {
 		var contentWidth = getGridContentWidth(grid);
-		if (contentWidth > grid.m_size.cx - grid.m_scrollSize) {
+		if (contentWidth > grid.m_size.cx) {
 			var sLeft = grid.m_scrollH / contentWidth * grid.m_size.cx;
 			var sRight = (grid.m_scrollH + grid.m_size.cx) / contentWidth * grid.m_size.cx;
 			if (sRight - sLeft < grid.m_scrollSize) {
@@ -317,7 +317,7 @@ var drawGridScrollBar = function(grid, paint, clipRect){
 	}
 	if(grid.m_showVScrollBar){
 	    var contentHeight = getGridContentHeight(grid);
-		if (contentHeight > grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize) {
+		if (contentHeight > grid.m_size.cy - grid.m_headerHeight) {
 			var sTop = grid.m_headerHeight + grid.m_scrollV / contentHeight * (grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize);
 			var sBottom = sTop + ((grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize)) / contentHeight * (grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize);
 			if (sBottom - sTop < grid.m_scrollSize) {
