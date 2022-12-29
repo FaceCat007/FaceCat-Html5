@@ -546,7 +546,7 @@ canvas { position:fixed;left:0px;top:0px; }
         var viewsSize = list.m_views.length;
 	    for (var i = 0; i < viewsSize; i++) {
 	        var thisCell = list.m_views[i];
-	        list.m_rects.push(new FCRect(0, i * list.m_itemHeight, list.m_size.cx, (i + 1) * list.m_itemHeight));
+	        list.m_rects.push(new FCRect(0, i * list.m_itemHeight, list.m_size.cx - list.m_scrollSize, (i + 1) * list.m_itemHeight));
 	    }
     };
     
