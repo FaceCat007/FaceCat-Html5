@@ -98,16 +98,9 @@ canvas { position:fixed;left:0px;top:0px; }
     m_histogram.m_vScaleDistance = 60;
     m_histogram.m_hScalePixel = 50;
     m_histogram.m_hScaleHeight = 30;
-    m_histogram.m_candlePaddingTop = 30;
-    m_histogram.m_candlePaddingBottom = 0;
-    m_histogram.m_volPaddingTop = 20;
-    m_histogram.m_volPaddingBottom = 0;
-    m_histogram.m_indPaddingTop = 20;
-    m_histogram.m_indPaddingBottom = 20;
-    m_histogram.m_vScaleDistance = 35;
     m_histogram.m_candleDivPercent = 1;
-    m_histogram.m_volDivPercent = 1;
-    m_histogram.m_indDivPercent = 1;
+    m_histogram.m_volDivPercent = 0;
+    m_histogram.m_indDivPercent = 0;
     m_histogram.m_font = "14px Arial";
     m_histogram.m_data = new Array();
     m_histogram.m_cycle = "tick";
@@ -410,11 +403,11 @@ canvas { position:fixed;left:0px;top:0px; }
         }
         var drawTitles = new Array();
         drawTitles.push("项目1 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
-        drawTitles.push("项目2 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
-        drawTitles.push("项目3 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
-        drawTitles.push("项目4 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
-        drawTitles.push("项目5 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
-        drawTitles.push("项目6 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目2 " + chart.m_data[crossLineIndex].m_data2.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目3 " + chart.m_data[crossLineIndex].m_data3.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目4 " + chart.m_data[crossLineIndex].m_data4.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目5 " + chart.m_data[crossLineIndex].m_data5.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目6 " + chart.m_data[crossLineIndex].m_data6.toFixed(chart.m_candleDigit));
 
         var iLeft = chart.m_leftVScaleWidth + 5;
         for(var i = 0; i < drawTitles.length; i++){

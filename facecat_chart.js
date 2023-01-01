@@ -27,6 +27,22 @@ function SecurityData() {
 };
 
 /*
+ * 基础图形
+ */
+function BaseShape() {
+    this.m_divIndex = 0; //所在层
+    this.m_type = "line"; //类型
+    this.m_lineWidth = 1; //线的宽度
+    this.m_color = "none"; //颜色
+    this.m_datas = new Array(); //第一组数据
+    this.m_datas2 = new Array(); //第二组数据
+    this.m_title = ""; //第一个标题
+    this.m_title2 = ""; //第二个标题
+    this.m_name = ""; //名称
+    this.m_style = ""; //样式
+};
+
+/*
 * 画线工具结构
 */
 function FCPlot() {
@@ -132,6 +148,7 @@ function FCChart() {
     this.m_allowDragScroll = true; //是否允许拖动滚动
     this.m_rightSpace = 0; //右侧空间
     this.m_visible = true; //是否可见
+    this.m_shapes = new Array(); //扩展图形
 };
 
 //直线参数
@@ -1900,6 +1917,34 @@ var drawChartScale = function(chart, paint, clipRect) {
             }
         }  
     }
+    if (indDivHeight2 > 0) {
+        chartGridScale(chart.m_indMin2, chart.m_indMax2, (indDivHeight2 - chart.m_indPaddingTop2 - chart.m_indPaddingBottom2) / 2, chart.m_vScaleDistance, chart.m_vScaleDistance / 2, parseInt((indDivHeight2 - chart.m_indPaddingTop2 - chart.m_indPaddingBottom2) / chart.m_vScaleDistance));
+        if (m_gridStep_Chart > 0) {
+            var start = 0;
+            if (chart.m_indMin2 >= 0) {
+                while (start + m_gridStep_Chart < chart.m_indMin2) {
+                    start += m_gridStep_Chart;
+                }
+            } else {
+                while (start - m_gridStep_Chart > chart.m_indMin2) {
+                    start -= m_gridStep_Chart;
+                }
+            }
+
+            while (start <= chart.m_indMax2) {
+                if (start > chart.m_indMin2) {
+                    var hAxisY = getChartY(chart, 3, start);
+                    paint.drawLine(chart.m_gridColor, m_lineWidth_Chart, [1, 1], chart.m_leftVScaleWidth, parseInt(hAxisY), chart.m_size.cx - chart.m_rightVScaleWidth, parseInt(hAxisY));
+                    paint.drawLine(chart.m_scaleColor, m_lineWidth_Chart, 0, chart.m_leftVScaleWidth - 8, parseInt(hAxisY), chart.m_leftVScaleWidth, parseInt(hAxisY));
+                    paint.drawLine(chart.m_scaleColor, m_lineWidth_Chart, 0, chart.m_size.cx - chart.m_rightVScaleWidth, parseInt(hAxisY), chart.m_size.cx - chart.m_rightVScaleWidth + 8, parseInt(hAxisY));
+                    var tSize = paint.textSize(start.toFixed(chart.m_indDigit), chart.m_font);
+                    paint.drawText(start.toFixed(chart.m_indDigit), chart.m_textColor, chart.m_font, chart.m_size.cx - chart.m_rightVScaleWidth + 10, parseInt(hAxisY));
+                    paint.drawText(start.toFixed(chart.m_indDigit), chart.m_textColor, chart.m_font, chart.m_leftVScaleWidth - tSize.cx - 10, parseInt(hAxisY));
+                }
+                start += m_gridStep_Chart;
+            }
+        }
+    }
     if(chart.m_data && chart.m_data.length > 0 && chart.m_hScaleHeight > 0){
         var dLeft = chart.m_leftVScaleWidth + 10;
         for(var i = chart.m_firstVisibleIndex; i <= chart.m_lastVisibleIndex; i++){
@@ -1944,6 +1989,7 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
     var candleDivHeight = getCandleDivHeight(chart);
     var volDivHeight = getVolDivHeight(chart);
     var indDivHeight = getIndDivHeight(chart);
+    var indDivHeight2 = getIndDivHeight2(chart);
     var crossLineIndex = chart.m_crossStopIndex;
     if (crossLineIndex == -1) {
         crossLineIndex = chart.m_lastVisibleIndex;
@@ -1952,18 +1998,48 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
     if (str == "ANaN") {
         crossLineIndex = chart.m_lastVisibleIndex;
     }
-    if(volDivHeight > 0){
-        var voltxt = "VOL " + chart.m_data[crossLineIndex].m_volume.toFixed(chart.m_volDigit);
-        var volSize = paint.textSize(voltxt, chart.m_font);
-        paint.drawText(voltxt, chart.m_textColor, chart.m_font, chart.m_leftVScaleWidth + 5, candleDivHeight + 5 + volSize.cy / 2);
+    if (volDivHeight > 0) {
+        var drawTitles = new Array();
+        var drawColors = new Array();
+        drawTitles.push("VOL " + chart.m_data[crossLineIndex].m_volume.toFixed(chart.m_volDigit));
+        drawColors.push(chart.m_textColor);
+        if (chart.m_shapes.length > 0) {
+            for (var i = 0; i < chart.m_shapes.length; i++) {
+                shape = chart.m_shapes[i]
+                if (shape.m_divIndex == 1) {
+                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
+                    drawColors.push(shape.m_color)
+                }
+            }
+        }
+        var iLeft = chart.m_leftVScaleWidth + 5;
+        for (var i = 0; i < drawTitles.length; i++) {
+            var tSize = paint.textSize(drawTitles[i], chart.m_font);
+            paint.drawText(drawTitles[i], drawColors[i], chart.m_font, iLeft, candleDivHeight + 5 + tSize.cy / 2);
+            iLeft += tSize.cx + 5;
+        }
     }
     //上面显示数据  高开低收
-    var titletxt = "";
     if (chart.m_cycle == "trend"){
-        titletxt = " CLOSE" +
-            chart.m_data[crossLineIndex].m_close.toFixed(chart.m_candleDigit);
-            var ttSize = paint.textSize(titletxt, chart.m_font);
-        paint.drawText(titletxt, chart.m_textColor, chart.m_font, chart.m_leftVScaleWidth + 5, 5 + ttSize.cy / 2);
+        var drawTitles = new Array();
+        var drawColors = new Array();
+        drawTitles.push("CLOSE " + chart.m_data[crossLineIndex].m_close.toFixed(chart.m_candleDigit));
+        drawColors.push(chart.m_textColor);
+        if (chart.m_shapes.length > 0) {
+            for (var i = 0; i < chart.m_shapes.length; i++) {
+                shape = chart.m_shapes[i]
+                if (shape.m_divIndex == 0) {
+                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
+                    drawColors.push(shape.m_color)
+                }
+            }
+        }
+        var iLeft = chart.m_leftVScaleWidth + 5;
+        for (var i = 0; i < drawTitles.length; i++) {
+            var tSize = paint.textSize(drawTitles[i], chart.m_font);
+            paint.drawText(drawTitles[i], drawColors[i], chart.m_font, iLeft, 5 + tSize.cy / 2);
+            iLeft += tSize.cx + 5;
+        }
     }else{
         var drawTitles = new Array();
         var drawColors = new Array();
@@ -1987,6 +2063,15 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             drawColors.push(m_indicatorColors[0]);
             drawColors.push(m_indicatorColors[1]);
             drawColors.push(m_indicatorColors[2]);
+        }
+        if (chart.m_shapes.length > 0) {
+            for (var i = 0; i < chart.m_shapes.length; i++) {
+                shape = chart.m_shapes[i]
+                if (shape.m_divIndex == 0) {
+                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
+                    drawColors.push(shape.m_color)
+                }
+            }
         }
         var iLeft = chart.m_leftVScaleWidth + 5;
         for (var i = 0; i < drawTitles.length; i++) {
@@ -2058,11 +2143,41 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             drawColors.push(m_indicatorColors[0]);
             drawColors.push(m_indicatorColors[1]);
         }
+        if (chart.m_shapes.length > 0) {
+            for (var i = 0; i < chart.m_shapes.length; i++) {
+                shape = chart.m_shapes[i]
+                if (shape.m_divIndex == 2) {
+                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
+                    drawColors.push(shape.m_color)
+                }
+            }
+        }
         var iLeft = chart.m_leftVScaleWidth + 5;
         for(var i = 0; i < drawTitles.length; i++){
             var tSize = paint.textSize(drawTitles[i], chart.m_font);
             paint.drawText(drawTitles[i], drawColors[i], chart.m_font, iLeft, candleDivHeight + volDivHeight + 5 + tSize.cy / 2);
             iLeft += tSize.cx + 5;
+        }
+    }
+    if (indDivHeight2 > 0) {
+        var drawTitles = new Array();
+        var drawColors = new Array();
+        if (chart.m_shapes.length > 0) {
+            for (var i = 0; i < chart.m_shapes.length; i++) {
+                shape = chart.m_shapes[i]
+                if (shape.m_divIndex == 3) {
+                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
+                    drawColors.push(shape.m_color)
+                }
+            }
+        }
+        if (drawTitles.length > 0) {
+            var iLeft = chart.m_leftVScaleWidth + 5;
+            for (var i = 0; i < drawTitles.length; i++) {
+                var tSize = paint.textSize(drawTitles[i], chart.m_font);
+                paint.drawText(drawTitles[i], drawColors[i], chart.m_font, iLeft, candleDivHeight + volDivHeight + indDivHeight + 5 + tSize.cy / 2);
+                iLeft += tSize.cx + 5;
+            }
         }
     }
     
@@ -2075,6 +2190,8 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             rightText = getChartValue(chart, chart.m_mousePosition).toFixed(chart.m_volDigit);
         }else if(chart.m_mousePosition.y > candleDivHeight + volDivHeight && chart.m_mousePosition.y < candleDivHeight + volDivHeight + indDivHeight){
             rightText = getChartValue(chart, chart.m_mousePosition).toFixed(chart.m_indDigit);
+        } else if (chart.m_mousePosition.y > candleDivHeight + volDivHeight + indDivHeight && chart.m_mousePosition.y < candleDivHeight + volDivHeight + indDivHeight + indDivHeight2) {
+            rightText = getChartValue(chart, chart.m_mousePosition).toFixed(chart.m_indDigit2);
         }
 
         var drawY = chart.m_mousePosition.y;
@@ -2138,6 +2255,10 @@ var calculateChartMaxMin = function (chart) {
     chart.m_volMin = 0;
     chart.m_indMin = 0;
     chart.m_indMin = 0;
+    var load1 = false;
+    var load2 = false;
+    var load3 = false;
+    var load4 = false;
     var isTrend = chart.m_cycle == "trend";
     var firstOpen = 0;
     if (chart.m_data && chart.m_data.length > 0) {
@@ -2156,43 +2277,55 @@ var calculateChartMaxMin = function (chart) {
                     chart.m_candleMin = chart.m_data[i].m_low;
                 }
                 chart.m_volMax = chart.m_data[i].m_volume;
+                load1 = true;
+                load2 = true;
                 if (chart.m_showIndicator == "MACD") {
                     chart.m_indMax = chart.m_alldifarr[i];
                     chart.m_indMin = chart.m_alldifarr[i];
+                    load3 = true;
                 }
                 else if (chart.m_showIndicator == "KDJ") {
                     chart.m_indMax = chart.m_kdjMap.k[i];
                     chart.m_indMin = chart.m_kdjMap.k[i];
+                    load3 = true;
                 }
                 else if (chart.m_showIndicator == "RSI") {
                     chart.m_indMax = chart.m_rsiMap.rsi6[i];
                     chart.m_indMin = chart.m_rsiMap.rsi6[i];
+                    load3 = true;
                 }
                 else if (chart.m_showIndicator == "BIAS") {
                     chart.m_indMax = chart.m_biasMap.bias1[i];
                     chart.m_indMin = chart.m_biasMap.bias1[i];
+                    load3 = true;
                 }
                 else if (chart.m_showIndicator == "ROC") {
                     chart.m_indMax = chart.m_rocMap.roc[i];
                     chart.m_indMin = chart.m_rocMap.roc[i];
+                    load3 = true;
                 }
                 else if (chart.m_showIndicator == "WR") {
                     chart.m_indMax = chart.m_wrMap.wr1[i];
                     chart.m_indMin = chart.m_wrMap.wr1[i];
+                    load3 = true;
                 } else if (chart.m_showIndicator == "CCI") {
                     chart.m_indMax = chart.m_cciArr[i];
                     chart.m_indMin = chart.m_cciArr[i];
+                    load3 = true;
                 } else if (chart.m_showIndicator == "BBI") {
                     chart.m_indMax = chart.m_bbiMap.bbi[i];
                     chart.m_indMin = chart.m_bbiMap.bbi[i];
+                    load3 = true;
                 }
                 else if (chart.m_showIndicator == "TRIX") {
                     chart.m_indMax = chart.m_trixMap.trix[i];
                     chart.m_indMin = chart.m_trixMap.trix[i];
+                    load3 = true;
                 }
                 else if (chart.m_showIndicator == "DMA") {
                     chart.m_indMax = chart.m_dmaMap.dif[i];
                     chart.m_indMin = chart.m_dmaMap.dif[i];
+                    load3 = true;
                 }
             } else {
                 if (isTrend) {
@@ -2356,6 +2489,105 @@ var calculateChartMaxMin = function (chart) {
                 }
                 if (chart.m_indMin > chart.m_dmaMap.difma[i]) {
                     chart.m_indMin = chart.m_dmaMap.difma[i];
+                }
+            }
+        }
+    }
+    if (chart.m_shapes.length > 0) {
+        var lastValidIndex = chart.m_lastVisibleIndex;
+        if (chart.m_lastValidIndex != -1) {
+            lastValidIndex = chart.m_lastValidIndex;
+        }
+        for (var s = 0; s < chart.m_shapes.length; s++) {
+            shape = chart.m_shapes[s];
+            if (shape.m_datas.length > 0) {
+                for (var i = chart.m_firstVisibleIndex; i <= lastValidIndex; i++) {
+                    if (shape.m_divIndex == 0) {
+                        if (!load1 && i == chart.m_firstVisibleIndex) {
+                            chart.m_candleMax = shape.m_datas[i];
+                            chart.m_candleMin = shape.m_datas[i];
+                            load1 = true;
+                        } else {
+                            if (shape.m_datas[i] > chart.m_candleMax) {
+                                chart.m_candleMax = shape.m_datas[i];
+                            }
+                            if (shape.m_datas[i] < chart.m_candleMin) {
+                                chart.m_candleMin = shape.m_datas[i];
+                            }
+                        }
+                    } else if (shape.m_divIndex == 1) {
+                        if (!load2 && i == chart.m_firstVisibleIndex) {
+                            chart.m_volMax = shape.m_datas[i];
+                            chart.m_volMin = shape.m_datas[i];
+                            load2 = true;
+                        } else {
+                            if (shape.m_datas[i] > chart.m_volMax) {
+                                chart.m_volMax = shape.m_datas[i];
+                            }
+                            if (shape.m_datas[i] < chart.m_volMin) {
+                                chart.m_volMin = shape.m_datas[i];
+                            }
+                        }
+                    } else if (shape.m_divIndex == 2) {
+                        if (!load3 && i == chart.m_firstVisibleIndex) {
+                            chart.m_indMax = shape.m_datas[i];
+                            chart.m_indMin = shape.m_datas[i];
+                            load3 = true;
+                        } else {
+                            if (shape.m_datas[i] > chart.m_indMax) {
+                                chart.m_indMax = shape.m_datas[i];
+                            }
+                            if (shape.m_datas[i] < chart.m_indMin) {
+                                chart.m_indMin = shape.m_datas[i];
+                            }
+                        }
+                    } else if (shape.m_divIndex == 3) {
+                        if (!load4 && i == chart.m_firstVisibleIndex) {
+                            chart.m_indMax2 = shape.m_datas[i];
+                            chart.m_indMin2 = shape.m_datas[i];
+                            load4 = true;
+                        } else {
+                            if (shape.m_datas[i] > chart.m_indMax2) {
+                                chart.m_indMax2 = shape.m_datas[i];
+                            }
+                            if (shape.m_datas[i] < chart.m_indMin2) {
+                                chart.m_indMin2 = shape.m_datas[i];
+                            }
+                        }
+                    }
+                }
+            }
+            if (shape.m_datas2.length > 0) {
+                for (var i = chart.m_firstVisibleIndex; i <= lastValidIndex; i++) {
+                    if (shape.m_divIndex == 0) {
+                        if (shape.m_datas2[i] > chart.m_candleMax) {
+                            chart.m_candleMax = shape.m_datas2[i];
+                        }
+                        if (shape.m_datas2[i] < chart.m_candleMin) {
+                            chart.m_candleMin = shape.m_datas2[i];
+                        }
+                    } else if (shape.m_divIndex == 1) {
+                        if (shape.m_datas2[i] > chart.m_volMax) {
+                            chart.m_volMax = shape.m_datas2[i];
+                        }
+                        if (shape.m_datas2[i] < chart.m_volMin) {
+                            chart.m_volMin = shape.m_datas2[i];
+                        }
+                    } else if (shape.m_divIndex == 2) {
+                        if (shape.m_datas2[i] > chart.m_indMax) {
+                            chart.m_indMax = shape.m_datas2[i];
+                        }
+                        if (shape.m_datas2[i] < chart.m_indMin) {
+                            chart.m_indMin = shape.m_datas2[i];
+                        }
+                    } else if (shape.m_divIndex == 3) {
+                        if (shape.m_datas2[i] > chart.m_indMax2) {
+                            chart.m_indMax2 = shape.m_datas2[i];
+                        }
+                        if (shape.m_datas2[i] < chart.m_indMin2) {
+                            chart.m_indMin2 = shape.m_datas2[i];
+                        }
+                    }
                 }
             }
         }
@@ -3132,6 +3364,13 @@ var drawChartStock = function(chart, paint, clipRect) {
                 drawChartLines(chart, paint, clipRect, 2, chart.m_dmaMap.dif, m_indicatorColors[0], (chart.m_selectShape == chart.m_showIndicator && chart.m_selectShapeEx == "DIF") ? true : false);
                 drawChartLines(chart, paint, clipRect, 2, chart.m_dmaMap.difma, m_indicatorColors[1], (chart.m_selectShape == chart.m_showIndicator && chart.m_selectShapeEx == "DIFMA") ? true : false);
             }
+        }
+    }
+    //绘制扩展线条
+    if (chart.m_shapes.length > 0) {
+        for (var i = 0; i < chart.m_shapes.length; i++) {
+            shape = chart.m_shapes[i]
+            drawChartLines(chart, paint, clipRect, shape.m_divIndex, shape.m_datas, shape.m_color, (chart.m_selectShape == shape.m_name) ? true : false);
         }
     }
 };
@@ -4026,6 +4265,15 @@ var selectShape = function (chart, mp) {
                 if (mp.y >= Math.min(lowY, highY) && mp.y <= Math.max(lowY, highY)) {
                     chart.m_selectShape = "CANDLE";
                 }
+            }
+        }
+    }
+    if (chart.m_shapes.length > 0) {
+        for (var i = 0; i < chart.m_shapes.length; i++) {
+            shape = chart.m_shapes[i]
+            if (selectLines(chart, mp, shape.m_divIndex, shape.m_datas, index)) {
+                chart.m_selectShape = shape.m_name;
+                break;  
             }
         }
     }

@@ -100,16 +100,9 @@ canvas { position:fixed;left:0px;top:0px; }
     m_chart2.m_vScaleDistance = 35;
     m_chart2.m_hScalePixel = 11;
     m_chart2.m_hScaleHeight = 30;
-    m_chart2.m_candlePaddingTop = 30;
-    m_chart2.m_candlePaddingBottom = 20;
-    m_chart2.m_volPaddingTop = 20;
-    m_chart2.m_volPaddingBottom = 0;
-    m_chart2.m_indPaddingTop = 20;
-    m_chart2.m_indPaddingBottom = 20;
-    m_chart2.m_vScaleDistance = 35;
     m_chart2.m_candleDivPercent = 1;
-    m_chart2.m_volDivPercent = 1;
-    m_chart2.m_indDivPercent = 1;
+    m_chart2.m_volDivPercent = 0;
+    m_chart2.m_indDivPercent = 0;
     m_chart2.m_font = "12px Arial";
     m_chart2.m_data = new Array();
     m_chart2.m_cycle = "tick";
@@ -314,7 +307,6 @@ canvas { position:fixed;left:0px;top:0px; }
     var drawChartLines2 = function (chart, paint, clipRect, divIndex, datas, color, text) {
         paint.beginPath();
         var lastX = 0, lastY = 0;
-        var maxVisibleRecord = getChartMaxVisibleCount(chart, chart.m_hScalePixel, getChartWorkAreaWidth(chart));
         var showLast = false;
         for (var i = 0; i < datas.length; i++) {
             var x = getChartX(chart, i + chart.m_firstVisibleIndex);
@@ -501,11 +493,11 @@ canvas { position:fixed;left:0px;top:0px; }
         }
         var drawTitles = new Array();
         drawTitles.push("项目1 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
-        drawTitles.push("项目2 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
-        drawTitles.push("项目3 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
-        drawTitles.push("项目4 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
-        drawTitles.push("项目5 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
-        drawTitles.push("项目6 " + chart.m_data[crossLineIndex].m_data1.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目2 " + chart.m_data[crossLineIndex].m_data2.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目3 " + chart.m_data[crossLineIndex].m_data3.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目4 " + chart.m_data[crossLineIndex].m_data4.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目5 " + chart.m_data[crossLineIndex].m_data5.toFixed(chart.m_candleDigit));
+        drawTitles.push("项目6 " + chart.m_data[crossLineIndex].m_data6.toFixed(chart.m_candleDigit));
 
         var iLeft = chart.m_leftVScaleWidth + 5;
         for(var i = 0; i < drawTitles.length; i++){

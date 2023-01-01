@@ -582,13 +582,13 @@ var findView = function(mp, views) {
 		var view = views[i];
 		if(view.m_visible && view.m_topMost) {
 			if(containsPoint(view, mp)) {
-			    if(view.m_showHScrollBar && view.m_scrollSize){
+			    if(view.m_showVScrollBar && view.m_scrollSize){
 			        var clx = clientX(view);
 	                if(mp.x >= clx + view.m_size.cx - view.m_scrollSize){
 	                    return view;
 	                }
 			    }
-			    if(view.m_showVScrollBar && view.m_scrollSize){
+			    if(view.m_showHScrollBar && view.m_scrollSize){
 			        var cly = clientY(view);
 	                if(mp.y >= cly + view.m_size.cy - view.m_scrollSize){
 	                    return view;
@@ -608,13 +608,13 @@ var findView = function(mp, views) {
 		var view = views[i];
 		if(view.m_visible && !view.m_topMost) {
 			if(containsPoint(view, mp)) {
-			    if(view.m_showHScrollBar && view.m_scrollSize){
+			    if(view.m_showVScrollBar && view.m_scrollSize){
 			        var clx = clientX(view);
 	                if(mp.x >= clx + view.m_size.cx - view.m_scrollSize){
 	                    return view;
 	                }
 			    }
-			    if(view.m_showVScrollBar && view.m_scrollSize){
+			    if(view.m_showHScrollBar && view.m_scrollSize){
 			        var cly = clientY(view);
 	                if(mp.y >= cly + view.m_size.cy - view.m_scrollSize){
 	                    return view;
@@ -940,6 +940,9 @@ var addMouseMoveEvent =  function(canvas, callBack){
 				var newBounds = new FCRect(m_dragBeginRect.left + offsetX, m_dragBeginRect.top + offsetY,
 					m_dragBeginRect.right + offsetX, m_dragBeginRect.bottom + offsetY);
 				m_draggingView.m_location = new FCPoint(newBounds.left, newBounds.top);
+				if (m_draggingView.m_parent && m_draggingView.m_parent.m_type == "split") {
+					resetSplitLayoutDiv(m_draggingView.m_parent);
+                }
 				if (m_draggingView.m_parent) {
 					if (m_draggingView.m_parent.m_paint) {
 						invalidateView(m_draggingView.m_parent, m_draggingView.m_parent.m_paint);
@@ -1001,6 +1004,9 @@ var addMouseMoveEvent2 =  function(canvas, callBack, enterCallBack, leaveCallBac
 				var newBounds = new FCRect(m_dragBeginRect.left + offsetX, m_dragBeginRect.top + offsetY,
 					m_dragBeginRect.right + offsetX, m_dragBeginRect.bottom + offsetY);
 				m_draggingView.m_location = new FCPoint(newBounds.left, newBounds.top);
+				if (m_draggingView.m_parent && m_draggingView.m_parent.m_type == "split") {
+					resetSplitLayoutDiv(m_draggingView.m_parent);
+				}
 				if (m_draggingView.m_parent) {
 					if (m_draggingView.m_parent.m_paint) {
 						invalidateView(m_draggingView.m_parent, m_draggingView.m_parent.m_paint);
@@ -1072,7 +1078,7 @@ var addMouseWheelEvent =  function(canvas, callBack){
 var addMouseUpEvent = function(canvas, callBack, clickCallBack){
     canvas.onmouseup = function(evt) {
         if(!m_isMobile){
-	        var mp = getMousePostion(evt, canvas);
+			var mp = getMousePostion(evt, canvas);
 	        if(m_mouseDownView) {
 		        var cmp = new FCPoint(mp.x - clientX(m_mouseDownView), mp.y - clientY(m_mouseDownView));
 		        var view = findView(mp, canvas.m_views);
@@ -1090,7 +1096,8 @@ var addMouseUpEvent = function(canvas, callBack, clickCallBack){
 			            callBack(mouseDownView, cmp, 1, 1, 0);
 			        }
 		        }
-	        }
+			}
+			m_draggingView = null;
 	    }
     };
 };
@@ -1222,7 +1229,7 @@ var addTouchMoveEvent = function(canvas, callBack){
 */
 var addTouchEndEvent = function(canvas, callBack, clickCallBack){
     canvas.ontouchend = function (evt) {
-        if(m_isMobile){
+		if (m_isMobile) {
             if (m_mouseDownView){
                  var mouseDownView = m_mouseDownView;
 	            var mp = m_touchPoint;
@@ -1237,7 +1244,8 @@ var addTouchEndEvent = function(canvas, callBack, clickCallBack){
 	            if(callBack){
 	                callBack(mouseDownView, m_firstTouch, m_secondTouch, m_touchFirstPoint, m_touchSecondPoint);
 	            }
-            }
+			}
+			m_draggingView = null;
         }
     };
 };

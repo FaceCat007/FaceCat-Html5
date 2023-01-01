@@ -491,93 +491,100 @@ canvas { position:fixed;left:0px;top:0px; }
     * view:视图
     * node:xml节点
     */
-    var setAttribute = function(view, node){
-        if(view.m_paint){
-            if(view.m_paint.m_defaultUIStyle == "dark"){
+    var setAttribute = function (view, node) {
+        if (view.m_paint) {
+            if (view.m_paint.m_defaultUIStyle == "dark") {
                 view.m_backColor = "rgb(0,0,0)";
                 view.m_borderColor = "rgb(100,100,100)";
                 view.m_textColor = "rgb(255,255,255)";
-            }else if(view.m_paint.m_defaultUIStyle == "light"){
+            } else if (view.m_paint.m_defaultUIStyle == "light") {
                 view.m_backColor = "rgb(255,255,255)";
                 view.m_borderColor = "rgb(150,150,150)";
                 view.m_textColor = "rgb(0,0,0)";
             }
         }
-        if(!view.m_location){
+        if (!view.m_location) {
             view.m_location = new FCPoint(0, 0);
         }
-        if(!view.m_size){
+        if (!view.m_size) {
             view.m_size = new FCSize(100, 30);
         }
-       for(var i = 0; i < node.attributes.length; i++){
-         var name = node.attributes[i].nodeName.toLowerCase();
-         var value = node.attributes[i].nodeValue;
-         if(name && value){
-            if(name == "location"){
-                view.m_location = new FCPoint(parseInt(value.split(',')[0]), parseInt(value.split(',')[1]));
-            }else if(name == "size"){
-                view.m_size = new FCSize(parseInt(value.split(',')[0]), parseInt(value.split(',')[1]));
-            }else if(name == "text"){
-                view.m_text = value;
-            }else if(name == "backcolor"){
-                var lowerStr = value.toLowerCase();
-                if(lowerStr.indexOf("rgb") == 0){
-                    view.m_backColor = value;
+        for (var i = 0; i < node.attributes.length; i++) {
+            var name = node.attributes[i].nodeName.toLowerCase();
+            var value = node.attributes[i].nodeValue;
+            if (name && value) {
+                if (name == "location") {
+                    view.m_location = new FCPoint(parseInt(value.split(',')[0]), parseInt(value.split(',')[1]));
+                } else if (name == "size") {
+                    view.m_size = new FCSize(parseInt(value.split(',')[0]), parseInt(value.split(',')[1]));
+                } else if (name == "text") {
+                    view.m_text = value;
+                } else if (name == "backcolor") {
+                    var lowerStr = value.toLowerCase();
+                    if (lowerStr.indexOf("rgb") == 0) {
+                        view.m_backColor = value;
+                    } else {
+                        view.m_backColor = null;
+                    }
+                } else if (name == "bordercolor") {
+                    var lowerStr = value.toLowerCase();
+                    if (lowerStr.indexOf("rgb") == 0) {
+                        view.m_borderColor = value;
+                    } else {
+                        view.m_borderColor = "none"
+                    }
+                } else if (name == "textcolor") {
+                    var lowerStr = value.toLowerCase();
+                    if (lowerStr.indexOf("rgb") == 0) {
+                        view.m_textColor = value;
+                    } else {
+                        view.m_textColor = "none"
+                    }
+                } else if (name == "layoutstyle") {
+                    view.m_layoutStyle = value.toLowerCase();
+                } else if (name == "dock") {
+                    view.m_dock = value;
+                } else if (name == "font") {
+                    var family = value.split(',')[0];
+                    if (family == "Default") {
+                        family = "Arial";
+                    }
+                    view.m_font = value.split(',')[1] + "px " + family;
+                } else if (name == "headerheight") {
+                    view.m_headerHeight = parseFloat(value);
+                } else if (name == "splitmode") {
+                    view.m_splitMode = value.toLowerCase();
                 }
-            }else if(name == "bordercolor"){
-                var lowerStr = value.toLowerCase();
-                if(lowerStr.indexOf("rgb") == 0){
-                    view.m_borderColor = value;
+                else if (name == "autowrap") {
+                    view.m_autoWrap = value.toLowerCase() == "true";
+                } else if (name == "name") {
+                    view.m_name = value;
+                } else if (name == "showvscrollbar") {
+                    view.m_showVScrollBar = value.toLowerCase() == "true";
+                    view.m_showHScrol = value.toLowerCase() == "true";
+                } else if (name == "showhscrollbar") {
+                    view.m_showHScrollBar = value.toLowerCase() == "true";
+                } else if (name == "visible") {
+                    view.m_visible = value.toLowerCase() == "true";
+                } else if (name == "displayoffset") {
+                    view.m_visible = value.toLowerCase() == "true";
+                } else if (name == "checked") {
+                    view.m_checked = value.toLowerCase() == "true";
+                } else if (name == "buttonsize") {
+                    view.m_buttonSize = value.toLowerCase() == "true";
+                } else if (name == "topmost") {
+                    view.m_topMost = value.toLowerCase() == "true";
+                } else if (name == "selectedindex") {
+                    view.m_selectedIndex = parseInt(value);
+                } else if (name == "src") {
+                    view.m_src = value;
+                } else if (name == "backimage") {
+                    view.m_backImage = value;
+                } else if (name == "groupname") {
+                    view.m_groupName = value;
                 }
-            }else if(name == "textcolor"){
-                var lowerStr = value.toLowerCase();
-                if(lowerStr.indexOf("rgb") == 0){
-                    view.m_textColor = value;
-                }
-            }else if(name == "layoutstyle"){
-                view.m_layoutStyle = value;
-            }else if(name == "dock"){
-                view.m_dock = value;
-            }else if(name == "font"){
-                var family = value.split(',')[0];
-                if(family == "Default"){
-                    family = "Arial";
-                }
-                view.m_font = value.split(',')[1] + "px " + family;
-            }else if(name == "headerheight"){
-                view.m_headerHeight = parseFloat(value);
-            }else if(name == "splitmode"){
-                view.m_splitMode = value;
             }
-            else if(name == "autowrap"){
-                view.m_autoWrap = value.toLowerCase() == "true";
-            }else if(name == "name"){
-                view.m_name = value;
-            }else if(name == "showvscrollbar"){
-                view.m_showVScrollBar = value.toLowerCase() == "true";
-            }else if(name == "showhscrollbar"){
-                view.m_showHScrollBar = value.toLowerCase() == "true";
-            }else if(name == "visible"){
-                view.m_visible = value.toLowerCase() == "true";
-            }else if(name == "displayoffset"){
-                view.m_visible = value.toLowerCase() == "true";
-            }else if(name == "checked"){
-                view.m_checked = value.toLowerCase() == "true";
-            }else if(name == "buttonsize"){
-                view.m_buttonSize = value.toLowerCase() == "true";
-            }else if(name == "topmost"){
-                view.m_topMost = value.toLowerCase() == "true";
-            }else if(name == "selectedindex"){
-                view.m_selectedIndex = parseInt(value);
-            }else if(name == "src"){
-                view.m_src = value;
-            }else if(name == "backimage"){
-                view.m_backImage = value;
-            } else if (name == "groupname") {
-                view.m_groupName = value;
-            }
-         }
-       }
+        }
     };
 
     /*
@@ -727,6 +734,12 @@ canvas { position:fixed;left:0px;top:0px; }
                             splitter.m_backColor = "rgb(100,100,100)";
                         }else if(view.m_paint.m_defaultUIStyle == "light"){
                             splitter.m_backColor = "rgb(150,150,150)";
+                        }
+                        var canDragSplitter = child.getAttribute("candragsplitter");
+                        if (canDragSplitter) {
+                            if (canDragSplitter == "true") {
+                                splitter.m_allowDrag = true;
+                            }
                         }
                         view.m_views.push(splitter);
                         view.m_splitter = splitter;

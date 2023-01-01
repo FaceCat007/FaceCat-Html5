@@ -777,6 +777,30 @@ canvas { position:fixed;left:0px;top:0px; }
     //最新数据的日期
     var m_lastDate_Chart = "";
 
+    //测试第四个层
+    var testDiv4 = function () {
+        m_chart.m_candleDivPercent = 0.3;
+        m_chart.m_volDivPercent = 0.2;
+        m_chart.m_indDivPercent = 0.25;
+        m_chart.m_indDivPercent2 = 0.25;
+        line1 = new BaseShape();
+        line1.m_color = "rgb(255,0,0)";
+        line1.m_divIndex = 3;
+        line1.m_name = "line1";
+        line1.m_title = "A";
+        line2 = new BaseShape();
+        line2.m_color = "rgb(0,255,0)";
+        line2.m_divIndex = 3;
+        line2.m_name = "line2";
+        line2.m_title = "B";
+        m_chart.m_shapes.push(line1);
+        m_chart.m_shapes.push(line2);
+        for (var i = 0; i < m_chart.m_data.length; i++) {
+            line1.m_datas.push(m_chart.m_data[i].m_high);
+            line2.m_datas.push(m_chart.m_data[i].m_low);
+        }
+    };
+
     /*
      * 查询历史数据
      */ 
@@ -837,6 +861,7 @@ canvas { position:fixed;left:0px;top:0px; }
                         } else {
                             m_chart.m_firstVisibleIndex = m_chart.m_lastVisibleIndex - maxVisibleRecord + 1;
                         }
+                        testDiv4();
                         resetChartVisibleRecord(m_chart);
                         checkChartLastVisibleIndex(m_chart);
                         calcChartIndicator(m_chart);

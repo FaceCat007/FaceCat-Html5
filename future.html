@@ -527,21 +527,27 @@ canvas { position:fixed;left:0px;top:0px; }
                 view.m_text = value;
             }else if(name == "backcolor"){
                 var lowerStr = value.toLowerCase();
-                if(lowerStr.indexOf("rgb") == 0){
+                if (lowerStr.indexOf("rgb") == 0) {
                     view.m_backColor = value;
+                } else {
+                    view.m_backColor = null;
                 }
             }else if(name == "bordercolor"){
                 var lowerStr = value.toLowerCase();
-                if(lowerStr.indexOf("rgb") == 0){
+                if (lowerStr.indexOf("rgb") == 0) {
                     view.m_borderColor = value;
+                } else {
+                    view.m_borderColor = "none"
                 }
             }else if(name == "textcolor"){
                 var lowerStr = value.toLowerCase();
-                if(lowerStr.indexOf("rgb") == 0){
+                if (lowerStr.indexOf("rgb") == 0) {
                     view.m_textColor = value;
+                } else {
+                    view.m_textColor = "none"
                 }
             }else if(name == "layoutstyle"){
-                view.m_layoutStyle = value;
+                view.m_layoutStyle = value.toLowerCase();
             }else if(name == "dock"){
                 view.m_dock = value;
             }else if(name == "font"){
@@ -553,7 +559,7 @@ canvas { position:fixed;left:0px;top:0px; }
             }else if(name == "headerheight"){
                 view.m_headerHeight = parseFloat(value);
             }else if(name == "splitmode"){
-                view.m_splitMode = value;
+                view.m_splitMode = value.toLowerCase();
             }
             else if(name == "autowrap"){
                 view.m_autoWrap = value.toLowerCase() == "true";
@@ -734,6 +740,12 @@ canvas { position:fixed;left:0px;top:0px; }
                             splitter.m_backColor = "rgb(100,100,100)";
                         }else if(view.m_paint.m_defaultUIStyle == "light"){
                             splitter.m_backColor = "rgb(150,150,150)";
+                        }
+                        var canDragSplitter = child.getAttribute("candragsplitter");
+                        if (canDragSplitter) {
+                            if (canDragSplitter == "true") {
+                                splitter.m_allowDrag = true;
+                            }
                         }
                         view.m_views.push(splitter);
                         view.m_splitter = splitter;
