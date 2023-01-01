@@ -793,11 +793,13 @@ canvas { position:fixed;left:0px;top:0px; }
         line2.m_divIndex = 3;
         line2.m_name = "line2";
         line2.m_title = "B";
+        line2.m_type = "bar";
         m_chart.m_shapes.push(line1);
         m_chart.m_shapes.push(line2);
         for (var i = 0; i < m_chart.m_data.length; i++) {
-            line1.m_datas.push(m_chart.m_data[i].m_high);
-            line2.m_datas.push(m_chart.m_data[i].m_low);
+            line1.m_datas.push(m_chart.m_data[i].m_close);
+            line2.m_datas.push(m_chart.m_data[i].m_high);
+            line2.m_datas2.push(m_chart.m_data[i].m_low);
         }
     };
 

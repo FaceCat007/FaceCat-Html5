@@ -34,6 +34,7 @@ function BaseShape() {
     this.m_type = "line"; //类型
     this.m_lineWidth = 1; //线的宽度
     this.m_color = "none"; //颜色
+    this.m_color2 = "none"; //颜色2
     this.m_datas = new Array(); //第一组数据
     this.m_datas2 = new Array(); //第二组数据
     this.m_title = ""; //第一个标题
@@ -3370,7 +3371,21 @@ var drawChartStock = function(chart, paint, clipRect) {
     if (chart.m_shapes.length > 0) {
         for (var i = 0; i < chart.m_shapes.length; i++) {
             shape = chart.m_shapes[i]
-            drawChartLines(chart, paint, clipRect, shape.m_divIndex, shape.m_datas, shape.m_color, (chart.m_selectShape == shape.m_name) ? true : false);
+            if (shape.m_type == "bar") {
+                for (var i = chart.m_firstVisibleIndex; i <= lastValidIndex; i++) {
+                    var x = getChartX(chart, i);
+                    var y1 = getChartY(chart, shape.m_divIndex, shape.m_datas[i]);
+                    var y2 = getChartY(chart, shape.m_divIndex, shape.m_datas2[i]);
+                    if (y1 >= y2) {
+                        paint.fillRect(shape.m_color, x - cWidth, y2, x + cWidth, y1);
+                    }
+                    else {
+                        paint.fillRect(shape.m_color, x - cWidth, y1, x + cWidth, y2);
+                    }
+                }
+            } else {
+                drawChartLines(chart, paint, clipRect, shape.m_divIndex, shape.m_datas, shape.m_color, (chart.m_selectShape == shape.m_name) ? true : false);
+            }
         }
     }
 };
