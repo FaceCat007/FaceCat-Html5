@@ -109,7 +109,9 @@ var updateTabLayout = function(tabView){
 var addTabPage = function(tabView, tabPage, tabButton){
 	tabPage.m_headerButton = tabButton;
 	tabPage.m_parent = tabView;
+	tabPage.m_paint = tabView.m_paint;
 	tabButton.m_parent = tabView;
+	tabButton.m_paint = tabView.m_paint;
 	tabView.m_tabPages.push(tabPage);
 	tabView.m_views.push(tabPage);
 	tabView.m_views.push(tabButton);

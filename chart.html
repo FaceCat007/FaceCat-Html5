@@ -108,6 +108,7 @@ canvas { position:fixed;left:0px;top:0px; }
     m_chart.m_indPaddingTop = 20;
     m_chart.m_indPaddingBottom = 20;
     m_chart.m_vScaleDistance = 35;
+    m_chart.m_cycle = "day";
     m_chart.m_font = "12px Arial";
 
     var m_addingPlot_Chart = ""; //正要添加的画线
@@ -790,9 +791,11 @@ canvas { position:fixed;left:0px;top:0px; }
         line1.m_title = "A";
         line2 = new BaseShape();
         line2.m_color = "rgb(0,255,0)";
+        line2.m_color2 = "rgb(255,255,0)";
         line2.m_divIndex = 3;
         line2.m_name = "line2";
         line2.m_title = "B";
+        line2.m_title2 = "C";
         line2.m_type = "bar";
         m_chart.m_shapes.push(line1);
         m_chart.m_shapes.push(line2);
@@ -818,18 +821,18 @@ canvas { position:fixed;left:0px;top:0px; }
                 var xmlhttp = new XMLHttpRequest();
                 xmlhttp.open("GET", url, true);
                 xmlhttp.onreadystatechange = function () {
-                    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {	
-                    m_chart.m_crossStopIndex = -1;
-                    m_chart.m_plots = new Array();
-                    m_chart.m_sPlot = null;
-                    m_chart.m_selectShape = ""; 
-                    m_chart.m_selectShapeEx = ""; 
-	                if (m_chart.m_cycle == "trend") {
-	                    m_chart.m_autoFillHScale = true;
-	                }else{
-            	        m_chart.m_autoFillHScale = false;
-	                }
-                    m_chart.m_hScalePixel = 11;
+                    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+                        m_chart.m_crossStopIndex = -1;
+                        m_chart.m_plots = new Array();
+                        m_chart.m_sPlot = null;
+                        m_chart.m_selectShape = "";
+                        m_chart.m_selectShapeEx = "";
+                        if (m_chart.m_cycle == "trend") {
+                            m_chart.m_autoFillHScale = true;
+                        } else {
+                            m_chart.m_autoFillHScale = false;
+                        }
+                        m_chart.m_hScalePixel = 11;
                         var result = xmlhttp.responseText;
                         var json = eval('(' + result + ')');
                         var dataList = new Array();

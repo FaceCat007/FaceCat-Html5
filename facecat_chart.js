@@ -1539,7 +1539,7 @@ var setChartVisibleIndex = function(chart, firstVisibleIndex, lastVisibleIndex){
 * clipRect:裁剪区域
 */
 var drawChart = function (chart, paint, clipRect) {
-    try{
+    try {
         if (chart.m_backColor) {
             paint.fillRect(chart.m_backColor, 0, 0, chart.m_size.cx, chart.m_size.cy);
         }
@@ -1550,7 +1550,7 @@ var drawChart = function (chart, paint, clipRect) {
         }
         if(paint.onPaintChartStock){
             paint.onPaintChartStock(chart, paint, clipRect);
-        }else{
+        } else {
             drawChartStock(chart, paint, clipRect);
         }
         if(paint.onPaintChartPlot){
@@ -1566,7 +1566,7 @@ var drawChart = function (chart, paint, clipRect) {
         if (chart.m_borderColor) {
             paint.drawRect(chart.m_borderColor, m_lineWidth_Chart, 0, 0, 0, chart.m_size.cx, chart.m_size.cy);
         }
-    }catch(err){
+    } catch (err) {
     }
 };
 
@@ -2010,6 +2010,10 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
                 if (shape.m_divIndex == 1) {
                     drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
                     drawColors.push(shape.m_color)
+                    if (shape.m_datas2.length > 0) {
+                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_indDigit2));
+                        drawColors.push(shape.m_color2)
+                    }
                 }
             }
         }
@@ -2032,6 +2036,10 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
                 if (shape.m_divIndex == 0) {
                     drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
                     drawColors.push(shape.m_color)
+                    if (shape.m_datas2.length > 0) {
+                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_indDigit2));
+                        drawColors.push(shape.m_color2)
+                    }
                 }
             }
         }
@@ -2071,6 +2079,10 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
                 if (shape.m_divIndex == 0) {
                     drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
                     drawColors.push(shape.m_color)
+                    if (shape.m_datas2.length > 0) {
+                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_indDigit2));
+                        drawColors.push(shape.m_color2)
+                    }
                 }
             }
         }
@@ -2150,6 +2162,10 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
                 if (shape.m_divIndex == 2) {
                     drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
                     drawColors.push(shape.m_color)
+                    if (shape.m_datas2.length > 0) {
+                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_indDigit2));
+                        drawColors.push(shape.m_color2)
+                    }
                 }
             }
         }
@@ -2169,6 +2185,10 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
                 if (shape.m_divIndex == 3) {
                     drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
                     drawColors.push(shape.m_color)
+                    if (shape.m_datas2.length > 0) {
+                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_indDigit2));
+                        drawColors.push(shape.m_color2)
+                    }
                 }
             }
         }
