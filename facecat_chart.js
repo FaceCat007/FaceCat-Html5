@@ -2008,10 +2008,10 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 1) {
-                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
+                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
                     drawColors.push(shape.m_color)
                     if (shape.m_datas2.length > 0) {
-                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_indDigit2));
+                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
                         drawColors.push(shape.m_color2)
                     }
                 }
@@ -2034,10 +2034,10 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 0) {
-                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
+                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_candleDigit));
                     drawColors.push(shape.m_color)
                     if (shape.m_datas2.length > 0) {
-                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_indDigit2));
+                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_candleDigit));
                         drawColors.push(shape.m_color2)
                     }
                 }
@@ -2077,10 +2077,10 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 0) {
-                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
+                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_candleDigit));
                     drawColors.push(shape.m_color)
                     if (shape.m_datas2.length > 0) {
-                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_indDigit2));
+                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_candleDigit));
                         drawColors.push(shape.m_color2)
                     }
                 }
@@ -2160,10 +2160,10 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 2) {
-                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
+                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit));
                     drawColors.push(shape.m_color)
                     if (shape.m_datas2.length > 0) {
-                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_indDigit2));
+                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_indDigit));
                         drawColors.push(shape.m_color2)
                     }
                 }
