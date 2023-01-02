@@ -461,7 +461,7 @@ var mouseDownGrid = function (grid, firstTouch, secondTouch, firstPoint, secondP
 	    var contentHeight = getGridContentHeight(grid);
 		if (contentHeight > grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize) {
 			var sTop = grid.m_headerHeight + grid.m_scrollV / contentHeight * (grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize);
-			var sBottom = (grid.m_scrollV + (grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize)) / contentHeight * (grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize);
+			var sBottom = grid.m_headerHeight + (grid.m_scrollV + (grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize)) / contentHeight * (grid.m_size.cy - grid.m_headerHeight - grid.m_scrollSize);
 			if (sBottom - sTop < grid.m_scrollSize) {
 				sBottom = sTop + grid.m_scrollSize;
 			}

@@ -360,7 +360,7 @@ var mouseDownTree = function (tree, firstTouch, secondTouch, firstPoint, secondP
 		var contentHeight = getTreeContentHeight(tree);
 		if (contentHeight > tree.m_size.cy) {
 			var sTop = tree.m_headerHeight + tree.m_scrollV / contentHeight * (tree.m_size.cy - tree.m_headerHeight - tree.m_scrollSize);
-			var sBottom = (tree.m_scrollV + (tree.m_size.cy - tree.m_headerHeight - tree.m_scrollSize)) / contentHeight * (tree.m_size.cy - tree.m_headerHeight - tree.m_scrollSize);
+			var sBottom = tree.m_headerHeight + (tree.m_scrollV + (tree.m_size.cy - tree.m_headerHeight - tree.m_scrollSize)) / contentHeight * (tree.m_size.cy - tree.m_headerHeight - tree.m_scrollSize);
 			if (sBottom - sTop < tree.m_scrollSize) {
 				sBottom = sTop + tree.m_scrollSize;
 			}
