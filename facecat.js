@@ -1035,6 +1035,7 @@ var addMouseMoveEvent2 =  function(canvas, callBack, enterCallBack, leaveCallBac
 				m_draggingView.m_location = new FCPoint(newBounds.left, newBounds.top);
 				if (m_draggingView.m_parent && m_draggingView.m_parent.m_type == "split") {
 					resetSplitLayoutDiv(m_draggingView.m_parent);
+					updateViewDefault(m_draggingView.m_parent.m_views);
 				}
 				if (m_draggingView.m_parent) {
 					if (m_draggingView.m_parent.m_paint) {
