@@ -736,6 +736,7 @@ canvas { position:fixed;left:0px;top:0px; }
                             view.m_size = new FCSize(parseInt(atrDatum.split(',')[0]), parseInt(atrDatum.split(',')[1]));
                         }
                         var splitter = new FCView();
+                        splitter.m_parent = view;
                         if(view.m_paint.m_defaultUIStyle == "dark"){
                             splitter.m_backColor = "rgb(100,100,100)";
                         }else if(view.m_paint.m_defaultUIStyle == "light"){

@@ -741,6 +741,7 @@ canvas { position:fixed;left:0px;top:0px; }
                                 splitter.m_allowDrag = true;
                             }
                         }
+                        splitter.m_parent = view;
                         view.m_views.push(splitter);
                         view.m_splitter = splitter;
                         var splitterposition = child.attributes["splitterposition"].nodeValue;

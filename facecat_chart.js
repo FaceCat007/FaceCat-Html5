@@ -2659,6 +2659,7 @@ var calculateChartMaxMin = function (chart) {
             chart.m_indMax2 = 1;
             chart.m_indMin2 = -1;
         }
+    }
 };
 
 /*
