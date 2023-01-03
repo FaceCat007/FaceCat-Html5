@@ -2008,11 +2008,16 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 1) {
-                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
-                    drawColors.push(shape.m_color)
-                    if (shape.m_datas2.length > 0) {
-                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
+                    if (shape.m_type == "bar"  && shape.m_style == "2color") {
+                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
                         drawColors.push(shape.m_color2)
+                    }else {
+                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
+                        drawColors.push(shape.m_color)
+                        if (shape.m_datas2.length > 0) {
+                            drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
+                            drawColors.push(shape.m_color2)
+                        }
                     }
                 }
             }
@@ -2034,11 +2039,16 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 0) {
-                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_candleDigit));
-                    drawColors.push(shape.m_color)
-                    if (shape.m_datas2.length > 0) {
-                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_candleDigit));
+                    if (shape.m_type == "bar" && shape.m_style == "2color") {
+                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
                         drawColors.push(shape.m_color2)
+                    } else {
+                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
+                        drawColors.push(shape.m_color)
+                        if (shape.m_datas2.length > 0) {
+                            drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
+                            drawColors.push(shape.m_color2)
+                        }
                     }
                 }
             }
@@ -2077,11 +2087,16 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 0) {
-                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_candleDigit));
-                    drawColors.push(shape.m_color)
-                    if (shape.m_datas2.length > 0) {
-                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_candleDigit));
+                    if (shape.m_type == "bar" && shape.m_style == "2color") {
+                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
                         drawColors.push(shape.m_color2)
+                    } else {
+                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
+                        drawColors.push(shape.m_color)
+                        if (shape.m_datas2.length > 0) {
+                            drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
+                            drawColors.push(shape.m_color2)
+                        }
                     }
                 }
             }
@@ -2160,11 +2175,16 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 2) {
-                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit));
-                    drawColors.push(shape.m_color)
-                    if (shape.m_datas2.length > 0) {
-                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_indDigit));
+                    if (shape.m_type == "bar" && shape.m_style == "2color") {
+                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
                         drawColors.push(shape.m_color2)
+                    } else {
+                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
+                        drawColors.push(shape.m_color)
+                        if (shape.m_datas2.length > 0) {
+                            drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
+                            drawColors.push(shape.m_color2)
+                        }
                     }
                 }
             }
@@ -2183,11 +2203,16 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 3) {
-                    drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_indDigit2));
-                    drawColors.push(shape.m_color)
-                    if (shape.m_datas2.length > 0) {
-                        drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_indDigit2));
+                    if (shape.m_type == "bar" && shape.m_style == "2color") {
+                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
                         drawColors.push(shape.m_color2)
+                    } else {
+                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
+                        drawColors.push(shape.m_color)
+                        if (shape.m_datas2.length > 0) {
+                            drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
+                            drawColors.push(shape.m_color2)
+                        }
                     }
                 }
             }
@@ -3392,15 +3417,28 @@ var drawChartStock = function(chart, paint, clipRect) {
         for (var i = 0; i < chart.m_shapes.length; i++) {
             shape = chart.m_shapes[i]
             if (shape.m_type == "bar") {
-                for (var i = chart.m_firstVisibleIndex; i <= lastValidIndex; i++) {
-                    var x = getChartX(chart, i);
-                    var y1 = getChartY(chart, shape.m_divIndex, shape.m_datas[i]);
-                    var y2 = getChartY(chart, shape.m_divIndex, shape.m_datas2[i]);
-                    if (y1 >= y2) {
-                        paint.fillRect(shape.m_color, x - cWidth, y2, x + cWidth, y1);
-                    }
-                    else {
-                        paint.fillRect(shape.m_color, x - cWidth, y1, x + cWidth, y2);
+                for (var j = chart.m_firstVisibleIndex; j <= lastValidIndex; j++) {
+                    var x = getChartX(chart, j);
+                    var y1 = getChartY(chart, shape.m_divIndex, shape.m_datas[j]);
+                    if (shape.m_style != "2color") {
+                        var y2 = getChartY(chart, shape.m_divIndex, shape.m_datas2[j]);
+                        if (y1 >= y2) {
+                            paint.fillRect(shape.m_color, x - cWidth, y2, x + cWidth, y1);
+                        }
+                        else {
+                            paint.fillRect(shape.m_color, x - cWidth, y1, x + cWidth, y2);
+                        }
+                    } else {
+                        var y2 = getChartY(chart, shape.m_divIndex, 0);
+                        if (y1 >= y2) {
+                            paint.drawLine(shape.m_color2, 1, 0, x, y1, x, y2);
+                        }
+                        else {
+                            paint.drawLine(shape.m_color, 1, 0, x, y1, x, y2);
+                        }
+                        if (j == lastValidIndex) {
+                            paint.drawLine(shape.m_color2, 1, 0, chart.m_leftVScaleWidth, y2, chart.m_size.cx - chart.m_rightVScaleWidth, y2);
+                        }
                     }
                 }
             } else {
