@@ -906,6 +906,34 @@ var addMouseDownEvent = function(canvas, callBack){
 };
 
 /*
+	* 更新悬浮状态
+	* views:视图集合
+	*/
+var updateViewDefault = function (views) {
+	for (var i = 0; i < views.length; i++) {
+		var view = views[i];
+		if (view.m_dock == "fill") {
+			if (view.m_parent && view.m_parent.m_type != "split") {
+				view.m_location = new FCPoint(0, 0);
+				view.m_size = new FCSize(view.m_parent.m_size.cx, view.m_parent.m_size.cy);
+			}
+		}
+		if (view.m_type == "split") {
+			resetSplitLayoutDiv(view);
+		} else if (view.m_type == "tabview") {
+			updateTabLayout(view);
+		} else if (view.m_type == "layout") {
+			resetLayoutDiv(view);
+		} else if (view.m_type == "calendar") {
+			updateCalendar(view);
+		}
+		if (view.m_views) {
+			updateViewDefault(view.m_views);
+		}
+	}
+};
+
+/*
 * 添加鼠标移动的方法
 * canvas:图层
 * callBack:回调函数
@@ -942,6 +970,7 @@ var addMouseMoveEvent =  function(canvas, callBack){
 				m_draggingView.m_location = new FCPoint(newBounds.left, newBounds.top);
 				if (m_draggingView.m_parent && m_draggingView.m_parent.m_type == "split") {
 					resetSplitLayoutDiv(m_draggingView.m_parent);
+					updateViewDefault(m_draggingView.m_parent.m_views);
                 }
 				if (m_draggingView.m_parent) {
 					if (m_draggingView.m_parent.m_paint) {
