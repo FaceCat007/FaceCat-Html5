@@ -2642,7 +2642,23 @@ var calculateChartMaxMin = function (chart) {
         var subMax = Math.max(Math.abs(chart.m_candleMax - firstOpen), Math.abs(chart.m_candleMin - firstOpen));
         chart.m_candleMax = firstOpen + subMax;
         chart.m_candleMin = firstOpen - subMax;
-    }
+    } else {
+        if (chart.m_candleMax == 0 && chart.m_candleMin == 0) {
+            chart.m_candleMax = 1;
+            chart.m_candleMin = -1;
+        }
+        if (chart.m_volMax == 0 && chart.m_volMin == 0) {
+            chart.m_volMax = 1;
+            chart.m_volMin = -1;
+        }
+        if (chart.m_indMax == 0 && chart.m_indMin == 0) {
+            chart.m_indMax = 1;
+            chart.m_indMin = -1;
+        }
+        if (chart.m_indMax2 == 0 && chart.m_indMin2 == 0) {
+            chart.m_indMax2 = 1;
+            chart.m_indMin2 = -1;
+        }
 };
 
 /*
