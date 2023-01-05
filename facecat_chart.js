@@ -42,7 +42,8 @@ function BaseShape() {
     this.m_name = ""; //名称
     this.m_style = ""; //样式
     this.m_text = ""; //显示的文字
-    this.m_value = 0 //显示文字的值
+    this.m_value = 0; //显示文字的值
+    this.m_showHideDatas = new Array(); //控制显示隐藏的数据
 };
 
 /*
@@ -2010,16 +2011,18 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 1) {
-                    if (shape.m_type == "bar"  && shape.m_style == "2color") {
-                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
-                        drawColors.push(shape.m_color2)
-                    } else {
-                        if (shape.m_type != "text") {
+                    if (shape.m_title.length() > 0) {
+                        if (shape.m_type == "bar" && shape.m_style == "2color") {
                             drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
-                            drawColors.push(shape.m_color)
-                            if (shape.m_datas2.length > 0) {
-                                drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
-                                drawColors.push(shape.m_color2)
+                            drawColors.push(shape.m_color2)
+                        } else {
+                            if (shape.m_type != "text") {
+                                drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
+                                drawColors.push(shape.m_color)
+                                if (shape.m_datas2.length > 0) {
+                                    drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
+                                    drawColors.push(shape.m_color2)
+                                }
                             }
                         }
                     }
@@ -2043,16 +2046,18 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 0) {
-                    if (shape.m_type == "bar" && shape.m_style == "2color") {
-                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
-                        drawColors.push(shape.m_color2)
-                    } else {
-                        if (shape.m_type != "text") {
+                    if (shape.m_title.length() > 0) {
+                        if (shape.m_type == "bar" && shape.m_style == "2color") {
                             drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
-                            drawColors.push(shape.m_color)
-                            if (shape.m_datas2.length > 0) {
-                                drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
-                                drawColors.push(shape.m_color2)
+                            drawColors.push(shape.m_color2)
+                        } else {
+                            if (shape.m_type != "text") {
+                                drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
+                                drawColors.push(shape.m_color)
+                                if (shape.m_datas2.length > 0) {
+                                    drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
+                                    drawColors.push(shape.m_color2)
+                                }
                             }
                         }
                     }
@@ -2093,16 +2098,18 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 0) {
-                    if (shape.m_type == "bar" && shape.m_style == "2color") {
-                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
-                        drawColors.push(shape.m_color2)
-                    } else {
-                        if (shape.m_type != "text") {
+                    if (shape.m_title.length() > 0) {
+                        if (shape.m_type == "bar" && shape.m_style == "2color") {
                             drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
-                            drawColors.push(shape.m_color)
-                            if (shape.m_datas2.length > 0) {
-                                drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
-                                drawColors.push(shape.m_color2)
+                            drawColors.push(shape.m_color2)
+                        } else {
+                            if (shape.m_type != "text") {
+                                drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
+                                drawColors.push(shape.m_color)
+                                if (shape.m_datas2.length > 0) {
+                                    drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
+                                    drawColors.push(shape.m_color2)
+                                }
                             }
                         }
                     }
@@ -2183,16 +2190,18 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 2) {
-                    if (shape.m_type == "bar" && shape.m_style == "2color") {
-                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
-                        drawColors.push(shape.m_color2)
-                    } else {
-                        if (shape.m_type != "text") {
+                    if (shape.m_title.length() > 0) {
+                        if (shape.m_type == "bar" && shape.m_style == "2color") {
                             drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
-                            drawColors.push(shape.m_color)
-                            if (shape.m_datas2.length > 0) {
-                                drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
-                                drawColors.push(shape.m_color2)
+                            drawColors.push(shape.m_color2)
+                        } else {
+                            if (shape.m_type != "text") {
+                                drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
+                                drawColors.push(shape.m_color)
+                                if (shape.m_datas2.length > 0) {
+                                    drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
+                                    drawColors.push(shape.m_color2)
+                                }
                             }
                         }
                     }
@@ -2213,16 +2222,18 @@ var drawChartCrossLine = function (chart, paint, clipRect) {
             for (var i = 0; i < chart.m_shapes.length; i++) {
                 shape = chart.m_shapes[i]
                 if (shape.m_divIndex == 3) {
-                    if (shape.m_type == "bar" && shape.m_style == "2color") {
-                        drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
-                        drawColors.push(shape.m_color2)
-                    } else {
-                        if (shape.m_type != "text") {
+                    if (shape.m_title.length() > 0) {
+                        if (shape.m_type == "bar" && shape.m_style == "2color") {
                             drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
-                            drawColors.push(shape.m_color)
-                            if (shape.m_datas2.length > 0) {
-                                drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
-                                drawColors.push(shape.m_color2)
+                            drawColors.push(shape.m_color2)
+                        } else {
+                            if (shape.m_type != "text") {
+                                drawTitles.push(shape.m_title + " " + shape.m_datas[crossLineIndex].toFixed(chart.m_volDigit));
+                                drawColors.push(shape.m_color)
+                                if (shape.m_datas2.length > 0) {
+                                    drawTitles.push(shape.m_title2 + " " + shape.m_datas2[crossLineIndex].toFixed(chart.m_volDigit));
+                                    drawColors.push(shape.m_color2)
+                                }
                             }
                         }
                     }
@@ -3447,6 +3458,9 @@ var drawChartStock = function(chart, paint, clipRect) {
             shape = chart.m_shapes[i]
             if (shape.m_type == "bar") {
                 for (var j = chart.m_firstVisibleIndex; j <= lastValidIndex; j++) {
+                    if (shape.m_showHideDatas.length > j && shape.m_showHideDatas[j].toString() == "0") {
+                        continue
+                    }
                     var x = getChartX(chart, j);
                     var y1 = getChartY(chart, shape.m_divIndex, shape.m_datas[j]);
                     if (shape.m_style != "2color") {
